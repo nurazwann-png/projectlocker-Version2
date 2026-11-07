@@ -955,6 +955,15 @@ select.v-input option { background: var(--v-panel-2); color: var(--v-text); }
 @media (max-width: 520px) { .v-hide-xs { display: none; } }
 .v-share-qr { width: 200px; height: 200px; margin: 0 auto 16px; padding: 10px; border-radius: 14px; background: #ffffff; box-shadow: 0 0 0 1px var(--v-line-2), 0 14px 40px -16px rgba(var(--v-c2-rgb),0.6); }
 .v-share-qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.v-share-qr.is-closed img { opacity: 0.25; filter: grayscale(1); }
+.v-share-list { display: flex; flex-direction: column; gap: 8px; }
+.v-share-item { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 10px 10px 12px; border-radius: 12px; border: 1px solid var(--v-line-2); background: rgba(var(--v-ink-rgb),0.02); transition: border-color .2s, background .2s; }
+.v-share-item.is-selected { border-color: rgba(var(--v-c1-rgb),0.55); background: rgba(var(--v-c1-rgb),0.06); }
+.v-share-item-main { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px; padding: 0; border: 0; background: none; color: var(--v-text); text-align: left; cursor: pointer; font-family: var(--v-sans); }
+.v-share-item-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.v-share-item-name { font-weight: 500; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-share-actions { display: flex; align-items: center; gap: 4px; }
+.v-share-confirm { flex-basis: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px; border-radius: 10px; background: rgba(var(--v-coral-rgb),0.08); border: 1px solid rgba(var(--v-coral-rgb),0.3); font-size: 13px; }
 .v-share-url { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-radius: 10px; border: 1px solid var(--v-line-2); background: rgba(var(--v-ink-rgb),0.04); }
 .v-share-url span { flex: 1; min-width: 0; font: 500 12.5px var(--v-mono); color: var(--v-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 10px 10px 10px 14px; border-radius: 12px; border: 1px solid rgba(var(--v-c1-rgb),0.3); background: rgba(var(--v-c1-rgb),0.07); font-size: 13px; color: var(--v-text); }

@@ -46,6 +46,22 @@ model Project {
   @@index([userId])
 }
 
+// A revocable link (shown as a QR code) that grants read-only access to a portfolio.
+// Deleting the row deletes the link; "closed" keeps it but blocks access.
+model ShareLink {
+  id           String    @id @default(cuid())
+  token        String    @unique
+  userId       String
+  label        String?
+  status       String    @default("active")
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([userId])
+}
+
 model ProjectView {
   id          String   @id @default(cuid())
   projectId   String

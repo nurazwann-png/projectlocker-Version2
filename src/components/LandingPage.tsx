@@ -279,7 +279,7 @@ export default function LandingPage() {
             <Feature full delay={0} accent="var(--v-c1)" icon={<IEye />} title={t("lx.f6")} desc={t("lx.f6d")}>
               <div className="lx-feat-demo">
                 <div className="lx-demo-row">
-                  <span><span style={{ color: "var(--v-faint)" }}>https://</span>locker.app/u/<span style={{ color: "var(--v-signal)" }}>nurazwann</span></span>
+                  <span><span style={{ color: "var(--v-faint)" }}>https://</span>projectlocker.app/s/<span style={{ color: "var(--v-signal)" }}>9fK2qX…</span></span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--v-text)" }}><ICopy style={{ width: 13, height: 13 }} /> {t("lx.copy").toUpperCase()}</span>
                 </div>
               </div>

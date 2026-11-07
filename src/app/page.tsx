@@ -486,7 +486,7 @@ export default function DashboardPage() {
         setDisplayName={profileApi.setDisplayName}
         setUsername={profileApi.setUsername}
       />
-      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} username={profile.username} onSetUsername={() => setEditorOpen(true)} />
+      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} mode={mode} />
 
       {deleteConfirmId && (
         <div className="v-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-title">
