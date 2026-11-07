@@ -11,7 +11,7 @@ import { IArrowUpRight, ICamera, ICopy, IEye, ILock, IPlus, LockerMark } from "@
 
 
 const DEMO: { name: string; stack: string; status: ProjectStatus }[] = [
-  { name: "PRESTIJ Hub", stack: "Next.js / Neon", status: "Live" },
+  { name: "e-Sekolah Hub", stack: "Next.js / Neon", status: "Live" },
   { name: "Kehadiran Guru", stack: "Laravel / MySQL", status: "Live" },
   { name: "eRPH Generator", stack: "FastAPI / React", status: "Maintenance" },
   { name: "Laporan Prestasi", stack: "Next.js / Sheets", status: "Live" },
@@ -158,9 +158,9 @@ export default function LandingPage() {
       <nav className="v-nav">
         <div className="lx-progress" style={{ width: `${progress}%` }} />
         <div className="v-wrap v-nav-inner">
-          <Link href="/landing" className="v-brand" aria-label="Locker">
+          <Link href="/landing" className="v-brand" aria-label="Project Locker">
             <LockerMark className="v-brand-mark" />
-            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-name">Project Locker</span>
           </Link>
           <div className="lx-nav-links">
             <a href="#features">{t("nav.features")}</a>
@@ -178,10 +178,10 @@ export default function LandingPage() {
       <header className="lx-hero" onMouseMove={tilt}>
         <div className="v-floor" />
         <div className="lx-hud-corner" style={{ top: 28, left: "clamp(16px, 4vw, 40px)" }}>
-          SYS://LOCKER v2.0<br />STATUS <b>● ONLINE</b>
+          SYS://PROJECT-LOCKER v2.0<br />STATUS <b>● ONLINE</b>
         </div>
         <div className="lx-hud-corner" style={{ top: 28, right: "clamp(16px, 4vw, 40px)", textAlign: "right" }}>
-          PPD DALAT · SARAWAK<br />LOCAL <b><Clock /></b>
+          PERSONAL APP INDEX<br />LOCAL <b><Clock /></b>
         </div>
 
         <div className="v-wrap" style={{ position: "relative", zIndex: 2, width: "100%" }}>
@@ -321,9 +321,9 @@ export default function LandingPage() {
       </main>
 
       <footer className="v-footer">
-        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>AZWANN ANIS</div></div>
         <div className="v-wrap v-footer-inner">
-          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Azwann Anis</span>
           <span className="v-mono" style={{ color: "var(--v-faint)" }}>{t("common.rights")}</span>
         </div>
       </footer>

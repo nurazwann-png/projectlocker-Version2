@@ -445,9 +445,9 @@ export default function AdminPage() {
 
       <nav className="v-nav">
         <div className="v-wrap v-nav-inner">
-          <Link href="/landing" className="v-brand" aria-label="Locker">
+          <Link href="/landing" className="v-brand" aria-label="Project Locker">
             <LockerMark className="v-brand-mark" />
-            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-name">Project Locker</span>
             <span className="v-brand-path">/ admin</span>
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -497,9 +497,9 @@ export default function AdminPage() {
       </main>
 
       <footer className="v-footer">
-        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>AZWANN ANIS</div></div>
         <div className="v-wrap v-footer-inner">
-          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Azwann Anis</span>
           <span className="v-mono" style={{ color: "var(--v-faint)" }}>All rights reserved</span>
         </div>
       </footer>

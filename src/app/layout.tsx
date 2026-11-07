@@ -12,13 +12,13 @@ const FONTS_URL =
   "&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap";
 
 export const metadata: Metadata = {
-  title: "PRESTIJ 4 MOE Hub",
-  description: "PRESTIJ Cohort 4, Ministry of Education — Project Locker platform.",
+  title: "Project Locker",
+  description: "Project Locker — a personal locker for every app you have designed, built and shipped.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "PRESTIJ 4 MOE Hub",
+    title: "Project Locker",
     startupImage: "/icon.jpg",
   },
   icons: {
@@ -31,7 +31,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#7c3aed",
+  themeColor: "#0891b2",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -39,9 +39,9 @@ function PageShell({ username, children }: { username: string; children: React.R
       <div className="v-noise" />
       <nav className="v-nav">
         <div className="v-wrap v-nav-inner">
-          <Link href="/landing" className="v-brand" aria-label="Locker">
+          <Link href="/landing" className="v-brand" aria-label="Project Locker">
             <LockerMark className="v-brand-mark" />
-            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-name">Project Locker</span>
             <span className="v-brand-path">/ u / {username}</span>
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -292,7 +292,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       </main>
 
       <footer className="v-footer">
-        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>AZWANN ANIS</div></div>
         <div className="v-wrap v-footer-inner">
           <span className="v-mono" style={{ color: "var(--v-faint)" }}>@{displayName} · {t("px.builtWith")}</span>
           <Link href="/landing" className="v-mono" style={{ color: "var(--v-signal)", textDecoration: "none" }}>{t("px.makeOwn")}</Link>

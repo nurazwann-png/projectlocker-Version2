@@ -31,7 +31,7 @@ export interface ProfileData {
 const LOCAL_KEY = "locker-profile-local";
 const DEFAULT_NAME = "Nurazwann bin Ismail";
 const DEFAULT_PROFILE: ProfileData = {
-  bio: "Full-stack developer at PPD Dalat — building tools that make teachers' lives easier.",
+  bio: "Full-stack developer — building tools that make teachers' lives easier.",
   cover: null,
   coverPosition: { x: 50, y: 50, scale: 1 },
   avatar: null,

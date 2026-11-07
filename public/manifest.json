@@ -1,12 +1,12 @@
 {
-  "name": "PRESTIJ 4 MOE Hub",
-  "short_name": "PRESTIJ Hub",
-  "description": "PRESTIJ Cohort 4, Ministry of Education — Project Locker platform.",
+  "name": "Project Locker",
+  "short_name": "Project Locker",
+  "description": "A personal locker for every app you have designed, built and shipped.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0a081c",
-  "theme_color": "#7c3aed",
+  "background_color": "#f4f6fd",
+  "theme_color": "#0891b2",
   "orientation": "any",
   "icons": [
     {

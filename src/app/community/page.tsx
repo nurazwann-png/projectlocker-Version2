@@ -47,9 +47,9 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
       <div className="v-noise" />
       <nav className="v-nav">
         <div className="v-wrap v-nav-inner">
-          <Link href="/landing" className="v-brand" aria-label="Locker">
+          <Link href="/landing" className="v-brand" aria-label="Project Locker">
             <LockerMark className="v-brand-mark" />
-            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-name">Project Locker</span>
             <span className="v-brand-path">/ community</span>
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -60,9 +60,9 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
       </nav>
       {children}
       <footer className="v-footer">
-        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>AZWANN ANIS</div></div>
         <div className="v-wrap v-footer-inner">
-          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Azwann Anis</span>
           <span className="v-mono" style={{ color: "var(--v-faint)" }}>All rights reserved</span>
         </div>
       </footer>
@@ -156,8 +156,8 @@ export default function CommunityPage() {
       <div className="cx-gate">
         <form onSubmit={handleVerify} className="cx-gate-panel v-hud">
           <span className="v-eyebrow">Restricted access</span>
-          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>PRESTIJ 4 MOE Hub</h1>
-          <p className="v-mono" style={{ marginTop: 8, color: "var(--v-faint)", fontSize: 10 }}>Ministry of Education Malaysia</p>
+          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>Project Locker Community</h1>
+          <p className="v-mono" style={{ marginTop: 8, color: "var(--v-faint)", fontSize: 10 }}>Members only</p>
           <div className="cx-lock"><ILock /></div>
           <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
             This community is restricted.<br />Enter your access code to continue.

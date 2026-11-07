@@ -47,9 +47,9 @@ export default function AuthShell({ children, title, titleEm }: { children: Reac
       <div className="v-noise" />
       <nav className="v-nav">
         <div className="v-wrap v-nav-inner">
-          <Link href="/landing" className="v-brand" aria-label="Locker">
+          <Link href="/landing" className="v-brand" aria-label="Project Locker">
             <LockerMark className="v-brand-mark" />
-            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-name">Project Locker</span>
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
@@ -59,7 +59,7 @@ export default function AuthShell({ children, title, titleEm }: { children: Reac
       </nav>
       <main className="v-main v-wrap au-main">
         <div className="au-copy v-rise">
-          <span className="v-eyebrow">Locker</span>
+          <span className="v-eyebrow">Project Locker</span>
           <h1 className="au-title">{title} <span className="v-grad-text">{titleEm}</span></h1>
           <p className="au-sub">{t("au.sub")}</p>
           <Link href="/admin" className="v-btn v-btn-sm" style={{ marginTop: 24 }}><ILock /> Admin</Link>

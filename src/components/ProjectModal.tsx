@@ -156,7 +156,7 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
 
           <Section no="01" title={t("form.identity")} hint={t("form.identityHint")}>
             <Field label={t("form.name")} required error={errors.name && t(errors.name)}>
-              <input ref={firstInputRef} type="text" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. PRESTIJ 4 MOE Hub" className={`v-input${errors.name ? " is-error" : ""}`} />
+              <input ref={firstInputRef} type="text" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Attendance Tracker" className={`v-input${errors.name ? " is-error" : ""}`} />
             </Field>
             <Field label={t("form.desc")} required error={errors.description && t(errors.description)} hint={`${form.description.length}/280`}>
               <textarea value={form.description} onChange={(e) => set("description", e.target.value.slice(0, 280))} placeholder={t("form.descPh")} rows={3} className={`v-input${errors.description ? " is-error" : ""}`} />
