@@ -262,7 +262,8 @@ html:has(.vault) ::-webkit-scrollbar-thumb:hover { background: rgba(var(--v-c1-r
 .v-nav-inner { height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .v-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--v-text); text-decoration: none; }
 .v-brand-mark { width: 30px; height: 30px; flex-shrink: 0; filter: drop-shadow(0 0 12px rgba(var(--v-c1-rgb),0.45)); }
-.v-brand-name { font-family: var(--v-display); font-weight: 600; font-size: 15px; letter-spacing: -0.02em; }
+.v-brand-name { font-family: var(--v-display); font-weight: 600; font-size: 15px; letter-spacing: -0.02em; white-space: nowrap; }
+@media (max-width: 420px) { .v-brand-name { font-size: 13px; } .v-brand { gap: 8px; } }
 .v-brand-path { font-family: var(--v-mono); font-size: 12px; color: var(--v-faint); }
 .v-nav-hints { display: inline-flex; align-items: center; gap: 6px; font-family: var(--v-mono); font-size: 11px; color: var(--v-faint); margin-right: 6px; }
 @media (max-width: 860px) { .v-nav-hints, .v-brand-path { display: none; } }

@@ -22,7 +22,7 @@ import { formatDate, monogram, pad } from "@/lib/projectMeta";
 import { useT, type TKey } from "@/lib/i18n";
 import {
   IArrowLeft, IArrowUpRight, ICheck, IDownload, IEdit, IGrid, IList, IPin, IPlus,
-  ISelect, IShare, ITimeline, ITrash, IUpload, IX, LockerMark,
+  ISelect, IShare, IUsers, ITimeline, ITrash, IUpload, IX, LockerMark,
 } from "@/components/icons";
 
 type ViewMode = "grid" | "list" | "timeline";
@@ -240,6 +240,7 @@ export default function DashboardPage() {
             </span>
             <ThemePicker />
             <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">{t("nav.home")}</span></Link>
+            <Link href="/community" className="v-btn v-btn-sm v-btn-quiet" title={t("nav.community")}><IUsers /> <span className="v-hide-xs">{t("nav.community")}</span></Link>
             {mode === "local" && <Link href="/sign-in" className="v-btn v-btn-sm v-hide-sm-down">{t("nav.signIn")}</Link>}
             {mode === "cloud" && <UserButton />}
             <button onClick={openAddModal} className="v-btn v-btn-sm v-btn-primary"><IPlus /> <span className="v-hide-xs">{t("nav.newProject")}</span></button>
