@@ -6,6 +6,7 @@ import { STATUS_CLASS } from "@/lib/projectMeta";
 import { ICamera, IGlobe, IPlus, IX } from "./icons";
 import { useT, type TKey } from "@/lib/i18n";
 import { liveScreenshotUrl } from "./Cover";
+import { uploadImage } from "@/lib/uploadImage";
 
 const EMPTY_FORM: ProjectFormData = {
   name: "",
@@ -62,19 +63,7 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
     if (!file) return;
     setThumbnailUploading(true);
     try {
-      const bitmap = await createImageBitmap(file);
-      const scale = Math.min(1, 1280 / bitmap.width, 720 / bitmap.height);
-      const w = Math.round(bitmap.width * scale);
-      const h = Math.round(bitmap.height * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-      bitmap.close();
-      set("thumbnail", canvas.toDataURL("image/jpeg", 0.82));
-    } catch {
-      const reader = new FileReader();
-      reader.onload = () => set("thumbnail", reader.result as string);
-      reader.readAsDataURL(file);
+      set("thumbnail", await uploadImage(file, "cover"));
     } finally {
       setThumbnailUploading(false);
     }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { ProfileData, ProfileLinks, UsernameResult } from "@/hooks/useProfile";
 import { useT, type TKey } from "@/lib/i18n";
 import { monogram } from "@/lib/projectMeta";
+import { uploadImage } from "@/lib/uploadImage";
 import { ICamera, ICheck, IX } from "./icons";
 
 interface ProfileEditorProps {
@@ -61,14 +62,7 @@ export default function ProfileEditor({ open, onClose, profile, displayName, mod
     if (!file) return;
     setUploading(true);
     try {
-      if (mode === "cloud") {
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("type", "avatar");
-        const res = await fetch("/api/upload", { method: "POST", body: fd });
-        if (res.ok) { setAvatar((await res.json()).url); return; }
-      }
-      setAvatar(await shrinkImage(file, 256));
+      setAvatar(mode === "cloud" ? await uploadImage(file, "avatar") : await shrinkImage(file, 256));
     } catch {
       // keep the previous photo
     } finally {

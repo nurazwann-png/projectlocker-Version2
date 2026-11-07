@@ -7,6 +7,7 @@ import Cover from "./Cover";
 import { formatDate, healthColor, healthScore, pad } from "@/lib/projectMeta";
 import { IArrowUpRight, ICamera, ICheck, ICopy, IEdit, IGithub, IPin, IPlus, ITrash } from "./icons";
 import { useT } from "@/lib/i18n";
+import { uploadImage } from "@/lib/uploadImage";
 
 interface ProjectCardProps {
   project: Project;
@@ -24,18 +25,6 @@ interface ProjectCardProps {
   readOnly?: boolean;
   selectMode?: boolean;
   selected?: boolean;
-}
-
-async function compressThumbnail(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1280 / bitmap.width, 720 / bitmap.height);
-  const w = Math.round(bitmap.width * scale);
-  const h = Math.round(bitmap.height * scale);
-  const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-  bitmap.close();
-  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 export default function ProjectCard({
@@ -56,7 +45,7 @@ export default function ProjectCard({
     if (!file || !onThumbnailChange) return;
     setUploading(true);
     try {
-      onThumbnailChange(project.id, await compressThumbnail(file));
+      onThumbnailChange(project.id, await uploadImage(file, "cover"));
     } catch {
       // keep existing thumbnail
     } finally {
