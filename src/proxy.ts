@@ -1,7 +1,10 @@
+import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+// The locker itself — only for signed-in users.
+const isLockerRoute = createRouteMatcher(["/"]);
+
 const isPublicRoute = createRouteMatcher([
-  "/",
   "/landing(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
@@ -20,6 +23,16 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
+  if (isLockerRoute(request)) {
+    const { userId } = await auth();
+    if (!userId) {
+      // Send signed-out visitors to our own sign-in page, then back to the locker.
+      const signIn = new URL("/sign-in", request.url);
+      signIn.searchParams.set("redirect_url", request.nextUrl.pathname + request.nextUrl.search);
+      return NextResponse.redirect(signIn);
+    }
+    return;
+  }
   if (!isPublicRoute(request)) {
     await auth.protect();
   }

@@ -452,7 +452,7 @@ export default function AdminPage() {
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
-            <Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Back</span></Link>
+            <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Back</span></Link>
             {isAuthenticated && <button onClick={handleSignOut} className="v-btn v-btn-sm">Sign out</button>}
           </div>
         </div>

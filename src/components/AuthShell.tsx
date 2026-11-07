@@ -53,7 +53,7 @@ export default function AuthShell({ children, title, titleEm }: { children: Reac
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
-            <Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> {t("nav.enterApp")}</Link>
+            <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> {t("nav.home")}</Link>
           </div>
         </div>
       </nav>
