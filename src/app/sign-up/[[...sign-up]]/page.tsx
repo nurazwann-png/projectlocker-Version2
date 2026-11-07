@@ -1,13 +1,15 @@
+"use client";
+
 import { SignUp } from "@clerk/nextjs";
+import AuthShell, { useClerkThemeVars } from "@/components/AuthShell";
+import { useT } from "@/lib/i18n";
 
 export default function SignUpPage() {
+  const t = useT();
+  const variables = useClerkThemeVars();
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{
-      backgroundImage: "url('/bg.jpg')",
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    }}>
-      <SignUp />
-    </div>
+    <AuthShell title={t("au.signUp")} titleEm={t("au.signUpEm")}>
+      {variables && <SignUp forceRedirectUrl="/" appearance={{ variables }} />}
+    </AuthShell>
   );
 }

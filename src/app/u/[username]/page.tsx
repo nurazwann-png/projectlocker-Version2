@@ -14,8 +14,10 @@ import TimelineView from "@/components/TimelineView";
 import StatusBadge from "@/components/StatusBadge";
 import Cover from "@/components/Cover";
 import ThemePicker from "@/components/ThemePicker";
+import ShareDialog from "@/components/ShareDialog";
+import { useT } from "@/lib/i18n";
 import { formatDate, monogram, pad } from "@/lib/projectMeta";
-import { IArrowUpRight, IEye, IGithub, LockerMark } from "@/components/icons";
+import { IArrowUpRight, IEye, IGithub, IShare, LockerMark } from "@/components/icons";
 
 const EMPTY_PROFILE: ProfileData & { username?: string | null } = {
   bio: "",
@@ -30,6 +32,7 @@ const EMPTY_PROFILE: ProfileData & { username?: string | null } = {
 type ViewMode = "grid" | "list" | "timeline";
 
 function PageShell({ username, children }: { username: string; children: React.ReactNode }) {
+  const t = useT();
   return (
     <div className="vault">
       <div className="v-atmos" />
@@ -43,7 +46,7 @@ function PageShell({ username, children }: { username: string; children: React.R
           </Link>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
-            <Link href="/community" className="v-btn v-btn-sm">Community <IArrowUpRight /></Link>
+            <Link href="/community" className="v-btn v-btn-sm">{t("nav.community")} <IArrowUpRight /></Link>
           </div>
         </div>
       </nav>
@@ -55,6 +58,8 @@ function PageShell({ username, children }: { username: string; children: React.R
 export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
   const { user } = useUser();
+  const t = useT();
+  const [shareOpen, setShareOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileData & { username?: string | null; ownerId?: string; viewerIsAdmin?: boolean }>(EMPTY_PROFILE);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +158,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", position: "relative", zIndex: 1 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
           <div className="px-spinner" />
-          <span className="v-mono" style={{ color: "var(--v-signal)" }}>Decrypting locker…</span>
+          <span className="v-mono" style={{ color: "var(--v-signal)" }}>{t("px.loading")}</span>
         </div>
       </div>
     </PageShell>
@@ -164,9 +169,9 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", position: "relative", zIndex: 1, textAlign: "center", padding: 24 }}>
         <div>
           <div className="v-display v-grad-text" style={{ fontSize: "clamp(96px, 20vw, 200px)", lineHeight: 0.9, fontWeight: 700 }}>404</div>
-          <h1 className="v-display" style={{ fontSize: 28, marginTop: 18 }}>Locker not found</h1>
-          <p style={{ color: "var(--v-muted)", marginTop: 10 }}>No one is registered at <span style={{ fontFamily: "var(--v-mono)", color: "var(--v-signal)" }}>/u/{username}</span>.</p>
-          <Link href="/community" className="v-btn" style={{ marginTop: 24 }}>Browse the community <IArrowUpRight /></Link>
+          <h1 className="v-display" style={{ fontSize: 28, marginTop: 18 }}>{t("px.notFound")}</h1>
+          <p style={{ color: "var(--v-muted)", marginTop: 10 }}>{t("px.notFoundSub")} <span style={{ fontFamily: "var(--v-mono)", color: "var(--v-signal)" }}>/u/{username}</span>.</p>
+          <Link href="/community" className="v-btn" style={{ marginTop: 24 }}>{t("px.browse")} <IArrowUpRight /></Link>
         </div>
       </div>
     </PageShell>
@@ -175,7 +180,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
   const links = [
     profile.links.github && { href: profile.links.github, label: "GitHub", icon: <IGithub /> },
     profile.links.linkedin && { href: profile.links.linkedin, label: "LinkedIn", icon: <IArrowUpRight /> },
-    profile.links.website && { href: profile.links.website, label: "Website", icon: <IArrowUpRight /> },
+    profile.links.website && { href: profile.links.website, label: t("pe.website"), icon: <IArrowUpRight /> },
   ].filter(Boolean) as { href: string; label: string; icon: React.ReactNode }[];
 
   return (
@@ -183,8 +188,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       {/* View-only strip */}
       <div className="v-main" style={{ borderBottom: "1px solid var(--v-line)", background: "rgba(var(--v-c1-rgb),0.05)" }}>
         <div className="v-wrap px-banner">
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><IEye style={{ width: 13, height: 13, color: "var(--v-signal)" }} /> Viewing <b>@{displayName}</b> · read-only</span>
-          <span className="hide-sm" style={{ color: "var(--v-faint)" }}>Public portfolio</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><IEye style={{ width: 13, height: 13, color: "var(--v-signal)" }} /> {t("px.viewing")} <b>@{displayName}</b> · {t("px.readOnly")}</span>
+          <span className="hide-sm" style={{ color: "var(--v-faint)" }}>{t("px.public")}</span>
         </div>
       </div>
 
@@ -200,22 +205,21 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             {profile.avatar ? <img src={profile.avatar} alt={`${displayName} avatar`} /> : <div><span className="v-grad-text">{monogram(displayName)}</span></div>}
           </div>
           <div className="v-rise" style={{ animationDelay: "120ms", minWidth: 0 }}>
-            <span className="v-eyebrow">Portfolio · Vol. {year}</span>
+            <span className="v-eyebrow">{t("px.eyebrow", { year })}</span>
             <h1 className="px-name">@{displayName}</h1>
             {profile.bio && <p className="px-bio">{profile.bio}</p>}
-            {links.length > 0 && (
-              <div className="px-links">
-                {links.map((l) => (
-                  <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="v-btn v-btn-sm">{l.icon} {l.label}</a>
-                ))}
-              </div>
-            )}
+            <div className="px-links">
+              {links.map((l) => (
+                <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="v-btn v-btn-sm">{l.icon} {l.label}</a>
+              ))}
+              <button className="v-btn v-btn-sm" onClick={() => setShareOpen(true)}><IShare /> {t("sh.eyebrow")}</button>
+            </div>
           </div>
           <div className="px-stats v-hud v-rise" style={{ animationDelay: "220ms" }}>
-            {([[projects.length, "Projects"], [techCount, "Technologies"], [statusCounts.Live, "Live now"]] as const).map(([n, label]) => (
+            {([[projects.length, "stat.projects"], [techCount, "stat.tech"], [statusCounts.Live, "stat.live"]] as const).map(([n, label]) => (
               <div key={label} className="v-stat">
                 <div className="v-stat-num">{pad(n)}</div>
-                <div className="v-mono v-stat-label">{label}</div>
+                <div className="v-mono v-stat-label">{t(label)}</div>
               </div>
             ))}
           </div>
@@ -223,7 +227,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         {profile.skills.length > 0 && (
           <div className="v-wrap" style={{ position: "relative", zIndex: 1, paddingBottom: 28 }}>
             <div className="v-tags" style={{ marginBottom: 0 }}>
-              <span className="v-mono v-tags-label" style={{ color: "var(--v-faint)" }}>Skills</span>
+              <span className="v-mono v-tags-label" style={{ color: "var(--v-faint)" }}>{t("px.skills")}</span>
               {profile.skills.map((s) => <span key={s} className="v-tag is-static">{s}</span>)}
             </div>
           </div>
@@ -233,8 +237,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       <main className="v-main v-wrap">
         <div className="v-section-head" style={{ marginTop: 48 }}>
           <div>
-            <span className="v-eyebrow">Shipped</span>
-            <h2 className="v-section-title">The work{projects.length > 0 && <sup>{pad(filtered.length)}/{pad(projects.length)}</sup>}</h2>
+            <span className="v-eyebrow">{t("px.shipped")}</span>
+            <h2 className="v-section-title">{t("px.work")}{projects.length > 0 && <sup>{pad(filtered.length)}/{pad(projects.length)}</sup>}</h2>
           </div>
         </div>
 
@@ -247,8 +251,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
 
         {filtered.length === 0 ? (
           <div style={{ padding: "80px 0", textAlign: "center" }}>
-            <p className="v-display" style={{ fontSize: 28 }}>{query || tagFilter || statusFilter ? <>Nothing matches <span className="v-grad-text">that</span>.</> : <>No projects <span className="v-grad-text">yet</span>.</>}</p>
-            <p style={{ color: "var(--v-muted)", marginTop: 12 }}>{query || tagFilter || statusFilter ? "Try a different word, tag or status." : "Check back soon — this locker is still being filled."}</p>
+            <p className="v-display" style={{ fontSize: 28 }}>{query || tagFilter || statusFilter ? <>{t("empty.noMatch")} <span className="v-grad-text">{t("empty.noMatchEm")}</span></> : <>{t("px.noProjects")} <span className="v-grad-text">{t("px.noProjectsEm")}</span></>}</p>
+            <p style={{ color: "var(--v-muted)", marginTop: 12 }}>{query || tagFilter || statusFilter ? t("empty.noMatchSub") : t("px.noProjectsSub")}</p>
           </div>
         ) : viewMode === "timeline" ? (
           <TimelineView projects={filtered} onCardClick={setDetailProject} onEdit={() => {}} />
@@ -258,7 +262,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
               <div key={project.id} role="listitem" tabIndex={0} className="v-row" style={{ animationDelay: `${Math.min(i, 12) * 35}ms`, gridTemplateColumns: undefined }}
                 onClick={() => setDetailProject(project)} onKeyDown={(e) => { if (e.key === "Enter") setDetailProject(project); }}>
                 <span className="v-card-no hide-sm">№{pad(entryNo.get(project.id) ?? i + 1, 3)}</span>
-                <div className="v-row-thumb"><Cover name={project.name} src={project.thumbnail} showCode={false} /></div>
+                <div className="v-row-thumb"><Cover name={project.name} src={project.thumbnail} liveUrl={project.liveUrl} showCode={false} /></div>
                 <div className="v-row-name">{project.name}</div>
                 <div className="v-row-stack hide-sm">{project.techStack.join("  /  ") || "—"}</div>
                 <div><StatusBadge status={project.status} /></div>
@@ -290,11 +294,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
       <footer className="v-footer">
         <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
         <div className="v-wrap v-footer-inner">
-          <span className="v-mono" style={{ color: "var(--v-faint)" }}>@{displayName} · Built with Locker</span>
-          <Link href="/landing" className="v-mono" style={{ color: "var(--v-signal)", textDecoration: "none" }}>Make your own locker →</Link>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>@{displayName} · {t("px.builtWith")}</span>
+          <Link href="/landing" className="v-mono" style={{ color: "var(--v-signal)", textDecoration: "none" }}>{t("px.makeOwn")}</Link>
         </div>
       </footer>
 
+      <ShareDialog open={shareOpen} onClose={() => setShareOpen(false)} username={profile.username ?? username} onSetUsername={() => {}} />
       <ProjectDetailModal
         project={detailProject}
         number={detailProject ? entryNo.get(detailProject.id) : undefined}

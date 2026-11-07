@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
-import CopyrightFooter from "@/components/CopyrightFooter";
+import { useUser, SignInButton } from "@clerk/nextjs";
+import ThemePicker from "@/components/ThemePicker";
+import { IArrowLeft, IArrowUpRight, ILock, ISearch, LockerMark } from "@/components/icons";
+import { monogram, pad } from "@/lib/projectMeta";
 
 interface CommunityProfile {
   username: string;
@@ -12,34 +14,61 @@ interface CommunityProfile {
   projectCount: number;
 }
 
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+const CX_CSS = `
+.cx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.cx-card { display: flex; flex-direction: column; text-decoration: none; color: var(--v-text); padding: 22px; min-height: 210px; }
+.cx-avatar { width: 64px; height: 64px; border-radius: 18px; padding: 2px; background: var(--v-grad); box-shadow: 0 0 30px -10px rgba(var(--v-c2-rgb),0.8); flex-shrink: 0; }
+.cx-avatar > * { width: 100%; height: 100%; border-radius: 16px; overflow: hidden; background: var(--v-panel); display: grid; place-items: center; object-fit: cover; }
+.cx-avatar span { font: 700 26px var(--v-display); letter-spacing: -0.06em; }
+.cx-name { font-family: var(--v-display); font-weight: 500; font-size: 20px; letter-spacing: -0.04em; margin-top: 18px; overflow-wrap: anywhere; }
+.cx-bio { margin-top: 8px; color: var(--v-muted); font-size: 13.5px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cx-cta { margin-top: auto; padding-top: 18px; display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px var(--v-sans); color: var(--v-signal); }
+.cx-cta svg { width: 13px; height: 13px; transition: transform .3s var(--v-ease); }
+.cx-card:hover .cx-cta svg { transform: translate(2px, -2px); }
+.cx-hero { padding: clamp(48px, 8vw, 96px) 0 36px; text-align: center; }
+.cx-title { font-family: var(--v-display); font-weight: 500; font-size: clamp(34px, 6vw, 76px); line-height: 1; letter-spacing: -0.055em; margin-top: 18px; }
+.cx-search { max-width: 560px; margin: 0 auto 36px; }
+.cx-search .v-input { width: 100%; height: 44px; }
+.cx-gate { min-height: calc(100vh - 62px); display: grid; place-items: center; padding: 32px 16px; position: relative; z-index: 1; }
+.cx-gate-panel { width: min(420px, 100%); padding: 32px 28px; text-align: center; border: 1px solid var(--v-line-2); border-radius: 18px; background-color: var(--v-panel); box-shadow: 0 30px 80px -30px rgba(var(--v-scrim-rgb),0.45), 0 0 50px -24px rgba(var(--v-c2-rgb),0.6); animation: vPop .4s var(--v-ease) both; }
+.cx-lock { width: 56px; height: 56px; margin: 22px auto 0; display: grid; place-items: center; border-radius: 16px; color: var(--v-signal); background: rgba(var(--v-c1-rgb),0.1); border: 1px solid rgba(var(--v-c1-rgb),0.35); box-shadow: 0 0 26px -8px rgba(var(--v-c1-rgb),0.7); }
+.cx-lock svg { width: 24px; height: 24px; }
+.cx-code { text-align: center; font: 600 15px var(--v-mono); letter-spacing: 0.2em; text-transform: uppercase; height: 46px; }
+`;
+
+const SESSION_KEY_STORE = "prestij_community_key";
+
+function Shell({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
+  const year = new Date().getFullYear();
+  return (
+    <div className="vault">
+      <style>{CX_CSS}</style>
+      <div className="v-atmos" />
+      <div className="v-noise" />
+      <nav className="v-nav">
+        <div className="v-wrap v-nav-inner">
+          <Link href="/landing" className="v-brand" aria-label="Locker">
+            <LockerMark className="v-brand-mark" />
+            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-path">/ community</span>
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ThemePicker />
+            {right}
+          </div>
+        </div>
+      </nav>
+      {children}
+      <footer className="v-footer">
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap v-footer-inner">
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>All rights reserved</span>
+        </div>
+      </footer>
+    </div>
+  );
 }
-
-const GRAD_PALETTE = [
-  ["#7c3aed", "#db2777"],
-  ["#0ea5e9", "#7c3aed"],
-  ["#059669", "#0ea5e9"],
-  ["#d97706", "#db2777"],
-  ["#dc2626", "#7c3aed"],
-  ["#0ea5e9", "#059669"],
-];
-
-function avatarGradient(name: string): string {
-  const [a, b] = GRAD_PALETTE[hashStr(name) % GRAD_PALETTE.length];
-  return `linear-gradient(135deg, ${a}, ${b})`;
-}
-
-const pageBg: import("react").CSSProperties = {
-  backgroundImage: "url('/bg.jpg')",
-  backgroundSize: "cover",
-  backgroundPosition: "center top",
-  backgroundAttachment: "fixed",
-  backgroundColor: "#eeeaff",
-  minHeight: "100vh",
-};
 
 export default function CommunityPage() {
   const { isSignedIn, isLoaded } = useUser();
@@ -47,12 +76,9 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  const SESSION_KEY_STORE = "prestij_community_key";
-
-  // ── Access gate state ──
   // unlocked=null → checking, false → show gate, true → show community
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
-  const [sessionKey, setSessionKey] = useState("");
+  const [, setSessionKey] = useState("");
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -119,260 +145,127 @@ export default function CommunityPage() {
   const filtered = useMemo(() => {
     if (!query.trim()) return profiles;
     const q = query.toLowerCase();
-    return profiles.filter(
-      (p) =>
-        p.username?.toLowerCase().includes(q) ||
-        p.bio?.toLowerCase().includes(q)
-    );
+    return profiles.filter((p) => p.username?.toLowerCase().includes(q) || p.bio?.toLowerCase().includes(q));
   }, [profiles, query]);
 
-  // ── Gate screen ──
+  const homeLink = <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Home</span></Link>;
+
+  // ── Gate ──
   if (unlocked === false) return (
-    <div style={{ ...pageBg, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-      <div style={{ width: "100%", maxWidth: 400, margin: "0 auto", padding: "0 24px" }}>
-        <div className="rounded-2xl p-8" style={{ background: "rgba(14,11,30,0.85)", backdropFilter: "blur(24px)", border: "1px solid rgba(124,58,237,0.3)", boxShadow: "0 24px 64px rgba(0,0,0,0.5)" }}>
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-7">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon.jpg" alt="PRESTIJ 4 MOE Hub" className="h-12 w-12 rounded-xl mb-3 object-cover" style={{ border: "2px solid rgba(124,58,237,0.4)" }} />
-            <h1 className="text-lg font-bold text-center" style={{ fontFamily: "'Syne', system-ui, sans-serif", color: "#ffffff", letterSpacing: "-0.02em" }}>PRESTIJ 4 MOE Hub</h1>
-            <p className="text-xs font-semibold text-center mt-1 tracking-widest uppercase" style={{ color: "#a78bfa" }}>Ministry of Education Malaysia</p>
-          </div>
-
-          {/* Lock icon */}
-          <div className="flex justify-center mb-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)" }}>
-              <svg className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" style={{ color: "#a78bfa" }}>
-                <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-              </svg>
-            </div>
-          </div>
-
-          <p className="text-center text-sm mb-6" style={{ color: "rgba(200,190,255,0.7)", lineHeight: 1.6 }}>
+    <Shell right={homeLink}>
+      <div className="cx-gate">
+        <form onSubmit={handleVerify} className="cx-gate-panel v-hud">
+          <span className="v-eyebrow">Restricted access</span>
+          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>PRESTIJ 4 MOE Hub</h1>
+          <p className="v-mono" style={{ marginTop: 8, color: "var(--v-faint)", fontSize: 10 }}>Ministry of Education Malaysia</p>
+          <div className="cx-lock"><ILock /></div>
+          <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
             This community is restricted.<br />Enter your access code to continue.
           </p>
-
-          <form onSubmit={handleVerify} className="space-y-3">
-            <input
-              value={codeInput}
-              onChange={(e) => { setCodeInput(e.target.value); setCodeError(""); }}
-              placeholder="Access code"
-              autoFocus
-              className="w-full rounded-xl px-4 py-3 text-sm text-center font-bold tracking-widest outline-none transition-all"
-              style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${codeError ? "rgba(239,68,68,0.5)" : "rgba(124,58,237,0.35)"}`, color: "#ffffff", letterSpacing: "0.15em" }}
-              onFocus={(e) => { if (!codeError) e.currentTarget.style.borderColor = "rgba(124,58,237,0.7)"; }}
-              onBlur={(e) => { if (!codeError) e.currentTarget.style.borderColor = "rgba(124,58,237,0.35)"; }}
-            />
-            {codeError && <p className="text-xs text-center" style={{ color: "#f87171" }}>{codeError}</p>}
-            <button
-              type="submit"
-              disabled={verifying || !codeInput.trim()}
-              className="w-full rounded-xl py-3 text-sm font-bold transition-all"
-              style={{ background: "#7c3aed", color: "#fff", border: "none", cursor: verifying || !codeInput.trim() ? "not-allowed" : "pointer", opacity: verifying || !codeInput.trim() ? 0.6 : 1, fontFamily: "'Syne', system-ui, sans-serif", letterSpacing: "0.04em" }}
-              onMouseEnter={(e) => { if (!verifying && codeInput.trim()) (e.currentTarget as HTMLButtonElement).style.background = "#6d28d9"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#7c3aed"; }}
-            >
-              {verifying ? "Verifying…" : "Enter Community"}
-            </button>
-          </form>
-
-          <div className="mt-5 pt-4 border-t flex items-center justify-center gap-2" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+          <input
+            value={codeInput}
+            onChange={(e) => { setCodeInput(e.target.value); setCodeError(""); }}
+            placeholder="Access code"
+            autoFocus
+            aria-label="Access code"
+            className={`v-input cx-code${codeError ? " is-error" : ""}`}
+          />
+          {codeError && <p className="v-error" style={{ marginTop: 10 }}>{codeError}</p>}
+          <button type="submit" disabled={verifying || !codeInput.trim()} className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%", marginTop: 14 }}>
+            {verifying ? "Verifying…" : "Enter community"}
+          </button>
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--v-line)" }}>
             <SignInButton mode="modal">
-              <button className="text-xs font-medium transition-colors" style={{ color: "#9693b8", background: "none", border: "none", cursor: "pointer" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#a78bfa"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}>
-                Sign in with account instead →
-              </button>
+              <button type="button" className="v-btn v-btn-sm v-btn-quiet">Sign in with account instead <IArrowUpRight /></button>
             </SignInButton>
           </div>
-        </div>
+        </form>
       </div>
-    </div>
+    </Shell>
   );
 
-  // ── Loading check (null = still verifying cookie) ──
+  // ── Checking access ──
   if (unlocked === null) return (
-    <div style={{ ...pageBg, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-      <div className="h-8 w-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(124,58,237,0.4)", borderTopColor: "#7c3aed" }} />
-    </div>
+    <Shell>
+      <div className="cx-gate">
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+          <div className="px-spinner" />
+          <span className="v-mono" style={{ color: "var(--v-signal)" }}>Checking access…</span>
+        </div>
+      </div>
+    </Shell>
   );
 
   return (
-    <div style={pageBg}>
-      {/* Nav bar */}
-      <div
-        className="sticky top-0 z-40 flex items-center justify-between px-6 py-3"
-        style={{ background: "rgba(14,11,30,0.65)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-            style={{ color: "rgba(200,190,255,0.7)" }}
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-            </svg>
-            {isSignedIn ? "My Dashboard" : "← Home"}
-          </Link>
-          <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
-          <span className="text-sm font-bold" style={{ color: "#ffffff", fontFamily: "'Syne', system-ui, sans-serif" }}>
-            Community
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: "rgba(200,190,255,0.5)" }}>
-            {loading ? "…" : `${profiles.length} member${profiles.length !== 1 ? "s" : ""}`}
-          </span>
+    <Shell
+      right={
+        <>
+          <Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">{isSignedIn ? "My locker" : "Home"}</span></Link>
           {isLoaded && !isSignedIn && (
             <SignInButton mode="modal">
-              <button className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all" style={{ background: "#7c3aed", color: "#fff", border: "none", cursor: "pointer", fontFamily: "'Syne', system-ui, sans-serif" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#6d28d9"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#7c3aed"; }}>
-                Sign in
-              </button>
+              <button className="v-btn v-btn-sm v-btn-primary">Sign in</button>
             </SignInButton>
           )}
-        </div>
-      </div>
+        </>
+      }
+    >
+      <main className="v-main v-wrap">
+        <header className="cx-hero">
+          <span className="v-eyebrow v-rise">Builders &amp; makers · {loading ? "––" : pad(profiles.length)} members</span>
+          <h1 className="cx-title v-rise" style={{ animationDelay: "100ms" }}>Meet the <span className="v-grad-text">community.</span></h1>
+          <p className="v-mono v-rise" style={{ marginTop: 18, animationDelay: "200ms", color: "var(--v-muted)", fontSize: 12 }}>MoE Agentic AI EcoSystem</p>
+        </header>
 
-      {/* Hero */}
-      <div className="px-6 pt-14 pb-10 text-center">
-        <div
-          className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 text-xs font-semibold"
-          style={{ background: "rgba(124,58,237,0.15)", color: "#c4b5fd", border: "1px solid rgba(124,58,237,0.3)" }}
-        >
-          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
-          </svg>
-          Builders & Makers
-        </div>
-        <h1 className="text-4xl font-bold mb-3" style={{ color: "#ffffff", fontFamily: "'Syne', system-ui, sans-serif", textShadow: "0 2px 20px rgba(124,58,237,0.4)" }}>
-          Meet the Community
-        </h1>
-        <p className="text-xl font-bold max-w-md mx-auto tracking-wide" style={{ fontFamily: "'Syne', system-ui, sans-serif", color: "#ffffff", textShadow: "0 0 24px rgba(124,58,237,0.7), 0 2px 8px rgba(0,0,0,0.4)", letterSpacing: "0.04em" }}>
-          MoE Agentic AI EcoSystem
-        </p>
-      </div>
+        <label className="v-search cx-search">
+          <ISearch />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name or bio…" className="v-input" aria-label="Search members" />
+        </label>
 
-      {/* Search */}
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 mb-8">
-        <div className="relative">
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor" style={{ color: "rgba(200,190,255,0.4)" }}>
-            <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name or bio…"
-            className="w-full rounded-2xl py-3 pl-11 pr-4 text-sm outline-none"
-            style={{
-              background: "rgba(255,255,255,0.09)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "#ffffff",
-              backdropFilter: "blur(12px)",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Grid */}
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-20">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="rounded-2xl p-6 space-y-3" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                <div className="shimmer rounded-full" style={{ height: 56, width: 56 }} />
-                <div className="shimmer rounded-lg" style={{ height: 16, width: "60%" }} />
-                <div className="shimmer rounded-lg" style={{ height: 12, width: "85%" }} />
-                <div className="shimmer rounded-lg" style={{ height: 12, width: "70%" }} />
+          <div className="cx-grid">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="v-card cx-card" style={{ cursor: "default", animationDelay: `${i * 60}ms` }}>
+                <div className="v-skel" style={{ width: 64, height: 64, borderRadius: 18 }} />
+                <div className="v-skel" style={{ height: 18, width: "55%", marginTop: 20 }} />
+                <div className="v-skel" style={{ height: 12, width: "85%", marginTop: 12 }} />
+                <div className="v-skel" style={{ height: 12, width: "65%", marginTop: 8 }} />
               </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <svg className="h-12 w-12 mb-4" style={{ color: "rgba(200,190,255,0.3)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-            </svg>
-            <p className="text-sm" style={{ color: "rgba(200,190,255,0.5)" }}>
-              {query ? "No members match your search" : "No members yet — be the first!"}
-            </p>
+          <div style={{ padding: "72px 0", textAlign: "center" }}>
+            <p className="v-display" style={{ fontSize: 28 }}>{query ? <>No one matches <span className="v-grad-text">that</span>.</> : <>No members <span className="v-grad-text">yet</span>.</>}</p>
+            <p style={{ color: "var(--v-muted)", marginTop: 12 }}>{query ? "Try a different name or keyword." : "Be the first to share your locker."}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((p) => (
+          <div className="cx-grid">
+            {filtered.map((p, i) => (
               <Link
                 key={p.username}
                 href={`/u/${p.username}`}
-                className="group flex flex-col rounded-2xl p-6 transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  backdropFilter: "blur(12px)",
-                  textDecoration: "none",
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.13)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(124,58,237,0.4)";
-                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-4px)";
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "0 12px 40px rgba(124,58,237,0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
-                  (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.1)";
-                  (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(0)";
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow = "none";
+                className="v-card cx-card"
+                style={{ animationDelay: `${Math.min(i, 10) * 60}ms` }}
+                onMouseMove={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+                  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
                 }}
               >
-                {/* Avatar */}
-                <div className="mb-4 flex items-start justify-between">
-                  {p.avatarUrl ? (
-                    <img
-                      src={p.avatarUrl}
-                      alt={p.username ?? ""}
-                      className="h-14 w-14 rounded-full object-cover"
-                      style={{ border: "2px solid rgba(124,58,237,0.3)" }}
-                    />
-                  ) : (
-                    <div
-                      className="h-14 w-14 rounded-full flex items-center justify-center text-xl font-bold text-white"
-                      style={{ background: avatarGradient(p.username ?? "") }}
-                    >
-                      {(p.username ?? "?").charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <span
-                    className="rounded-full px-3 py-1 text-xs font-semibold"
-                    style={{ background: "rgba(124,58,237,0.15)", color: "#c4b5fd", border: "1px solid rgba(124,58,237,0.3)" }}
-                  >
-                    {p.projectCount} project{p.projectCount !== 1 ? "s" : ""}
-                  </span>
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div className="cx-avatar">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    {p.avatarUrl ? <img src={p.avatarUrl} alt={`${p.username} avatar`} /> : <div><span className="v-grad-text">{monogram(p.username ?? "?")}</span></div>}
+                  </div>
+                  <span className="v-chip" style={{ paddingRight: 10 }}>{pad(p.projectCount)} project{p.projectCount !== 1 ? "s" : ""}</span>
                 </div>
-
-                {/* Info */}
-                <p className="text-base font-bold mb-1" style={{ color: "#ffffff", fontFamily: "'Syne', system-ui, sans-serif" }}>
-                  @{p.username}
-                </p>
-                {p.bio && (
-                  <p className="text-xs leading-relaxed line-clamp-2" style={{ color: "rgba(200,190,255,0.65)" }}>
-                    {p.bio}
-                  </p>
-                )}
-
-                {/* CTA */}
-                <div className="mt-auto pt-4 flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#a78bfa" }}>
-                  View portfolio
-                  <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
-                  </svg>
-                </div>
+                <div className="cx-name">@{p.username}</div>
+                {p.bio && <p className="cx-bio">{p.bio}</p>}
+                <span className="cx-cta">View portfolio <IArrowUpRight /></span>
               </Link>
             ))}
           </div>
         )}
-      </div>
-
-      <CopyrightFooter dark />
-    </div>
+      </main>
+    </Shell>
   );
 }

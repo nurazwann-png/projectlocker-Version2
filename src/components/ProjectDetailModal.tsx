@@ -7,6 +7,7 @@ import CommentSection from "./CommentSection";
 import Cover from "./Cover";
 import { formatDate, healthColor, healthScore, pad } from "@/lib/projectMeta";
 import { IArrowUpRight, IEdit, IEye, IGithub, ILock, IUnlock, IX } from "./icons";
+import { useT } from "@/lib/i18n";
 
 interface Viewer {
   viewerName: string;
@@ -60,6 +61,7 @@ export default function ProjectDetailModal({
   onNotesLockChange, onNotesPinChange,
   notesPin, readOnly = false, isOwner = false, showViewers = false, onView, onOpen,
 }: ProjectDetailModalProps) {
+  const t = useT();
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -168,18 +170,18 @@ export default function ProjectDetailModal({
       <div className="v-backdrop" onClick={onClose} />
       <div className="v-drawer" style={{ width: "min(780px, 100%)" }}>
         <div className="v-drawer-head">
-          <span className="v-eyebrow">Entry №{pad(number ?? 0, 3)}</span>
+          <span className="v-eyebrow">{t("detail.entry", { n: pad(number ?? 0, 3) })}</span>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {!readOnly && (
-              <button onClick={() => { onClose(); onEdit(project); }} className="v-btn v-btn-sm"><IEdit /> Edit</button>
+              <button onClick={() => { onClose(); onEdit(project); }} className="v-btn v-btn-sm"><IEdit /> {t("card.edit")}</button>
             )}
-            <button onClick={onClose} className="v-icon-btn" aria-label="Close"><IX /></button>
+            <button onClick={onClose} className="v-icon-btn" aria-label={t("common.close")}><IX /></button>
           </div>
         </div>
 
         <div className="v-drawer-body">
           <div className="v-dossier-media">
-            <Cover name={project.name} src={project.thumbnail} />
+            <Cover name={project.name} src={project.thumbnail} liveUrl={project.liveUrl} />
           </div>
 
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
@@ -191,33 +193,33 @@ export default function ProjectDetailModal({
             <div style={{ display: "flex", gap: 8, marginTop: 22, flexWrap: "wrap" }}>
               {liveUrl && (
                 <a href={liveUrl} target="_blank" rel="noopener noreferrer" onClick={() => onView?.(project.id)} className="v-btn v-btn-primary">
-                  Open live site <IArrowUpRight />
+                  {t("detail.openLive")} <IArrowUpRight />
                 </a>
               )}
               {!readOnly && repoUrl && (
                 <a href={repoUrl} target="_blank" rel="noopener noreferrer" onClick={() => onView?.(project.id)} className="v-btn">
-                  <IGithub /> Repository
+                  <IGithub /> {t("detail.repo")}
                 </a>
               )}
             </div>
           )}
 
           <div className="v-meta">
-            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>Status</div><div className="v-meta-val"><StatusBadge status={project.status} /></div></div>
-            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>Shipped</div><div className="v-meta-val">{formatDate(project.deploymentDate)}</div></div>
+            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>{t("detail.status")}</div><div className="v-meta-val"><StatusBadge status={project.status} /></div></div>
+            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>{t("detail.shipped")}</div><div className="v-meta-val">{formatDate(project.deploymentDate)}</div></div>
             <div>
-              <div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>Health</div>
+              <div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>{t("detail.health")}</div>
               <div className="v-meta-val">
                 <span className="v-health-bar" style={{ width: 56 }}><i style={{ width: `${score}%`, background: healthColor(score) }} /></span>
                 <span style={{ fontFamily: "var(--v-mono)", fontSize: 13 }}>{score}</span>
               </div>
             </div>
-            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>Added</div><div className="v-meta-val">{formatDate(project.createdAt)}</div></div>
+            <div><div className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)" }}>{t("detail.added")}</div><div className="v-meta-val">{formatDate(project.createdAt)}</div></div>
           </div>
 
           {project.techStack.length > 0 && (
             <div className="v-block">
-              <div className="v-block-head"><span className="v-eyebrow">Stack</span></div>
+              <div className="v-block-head"><span className="v-eyebrow">{t("detail.stack")}</span></div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {project.techStack.map((tag) => <span key={tag} className="v-chip" style={{ paddingRight: 10 }}>{tag}</span>)}
               </div>
@@ -226,7 +228,7 @@ export default function ProjectDetailModal({
 
           {features.length > 0 && (
             <div className="v-block">
-              <div className="v-block-head"><span className="v-eyebrow">Highlights</span></div>
+              <div className="v-block-head"><span className="v-eyebrow">{t("detail.highlights")}</span></div>
               <ol className="v-features">{features.map((f, i) => <li key={i}>{f}</li>)}</ol>
             </div>
           )}
@@ -235,30 +237,30 @@ export default function ProjectDetailModal({
           {readOnly ? (
             isLocked ? (
               <div className="v-block">
-                <div className="v-lockbox"><ILock style={{ width: 20, height: 20, color: "var(--v-faint)" }} /><span style={{ color: "var(--v-muted)" }}>Notes are private.</span></div>
+                <div className="v-lockbox"><ILock style={{ width: 20, height: 20, color: "var(--v-faint)" }} /><span style={{ color: "var(--v-muted)" }}>{t("detail.notesPrivate")}</span></div>
               </div>
             ) : project.notes ? (
               <div className="v-block">
-                <div className="v-block-head"><span className="v-eyebrow">Notes</span></div>
+                <div className="v-block-head"><span className="v-eyebrow">{t("detail.notes")}</span></div>
                 <div className="v-notes-box"><NotesContent text={project.notes} /></div>
               </div>
             ) : null
           ) : (
             <div className="v-block">
               <div className="v-block-head">
-                <span className="v-eyebrow">Private notes</span>
+                <span className="v-eyebrow">{t("detail.privateNotes")}</span>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  {notesSaved && !isLocked && <span className="v-mono" style={{ color: "var(--v-signal)", marginRight: 6 }}>Saved</span>}
+                  {notesSaved && !isLocked && <span className="v-mono" style={{ color: "var(--v-signal)", marginRight: 6 }}>{t("common.saved")}</span>}
                   {(!isLocked || notesUnlocked) && (
                     <button onClick={() => { setSettingPin((v) => !v); setLockAfterPin(false); }} className="v-btn v-btn-sm v-btn-quiet">
-                      {notesPin ? "Change PIN" : "Set PIN"}
+                      {notesPin ? t("detail.changePin") : t("detail.setPin")}
                     </button>
                   )}
                   {!isLocked ? (
-                    <button onClick={handleLockClick} className="v-btn v-btn-sm v-btn-quiet" title="Lock this note"><ILock /> Lock</button>
+                    <button onClick={handleLockClick} className="v-btn v-btn-sm v-btn-quiet" title={t("detail.lock")}><ILock /> {t("detail.lock")}</button>
                   ) : notesUnlocked ? (
-                    <button onClick={() => { onNotesLockChange?.(project.id, false); setNotesUnlocked(false); }} className="v-btn v-btn-sm v-btn-quiet" style={{ color: "var(--v-signal)" }} title="Remove lock">
-                      <IUnlock /> Remove lock
+                    <button onClick={() => { onNotesLockChange?.(project.id, false); setNotesUnlocked(false); }} className="v-btn v-btn-sm v-btn-quiet" style={{ color: "var(--v-signal)" }} title={t("detail.removeLock")}>
+                      <IUnlock /> {t("detail.removeLock")}
                     </button>
                   ) : null}
                 </div>
@@ -266,21 +268,21 @@ export default function ProjectDetailModal({
 
               {settingPin && (
                 <div className="v-subpanel" style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 13, color: "var(--v-text)", marginBottom: 12 }}>{notesPin ? "Change your 4-digit PIN" : "Set a 4-digit PIN to lock notes"}</div>
+                  <div style={{ fontSize: 13, color: "var(--v-text)", marginBottom: 12 }}>{notesPin ? t("detail.pinChangeTitle") : t("detail.pinSetTitle")}</div>
                   <div className="v-field-row">
                     <input type="password" inputMode="numeric" maxLength={4} value={pinDraft}
                       onChange={(e) => { setPinDraft(e.target.value.replace(/\D/g, "")); setPinConfirmError(false); }}
-                      placeholder="New PIN" className="v-input" />
+                      placeholder={t("detail.newPin")} className="v-input" />
                     <input type="password" inputMode="numeric" maxLength={4} value={pinConfirm}
                       onChange={(e) => { setPinConfirm(e.target.value.replace(/\D/g, "")); setPinConfirmError(false); }}
-                      placeholder="Confirm PIN" className={`v-input${pinConfirmError ? " is-error" : ""}`} />
+                      placeholder={t("detail.confirmPin")} className={`v-input${pinConfirmError ? " is-error" : ""}`} />
                   </div>
-                  {pinConfirmError && <div className="v-error" style={{ marginTop: 8 }}>PINs don&apos;t match.</div>}
+                  {pinConfirmError && <div className="v-error" style={{ marginTop: 8 }}>{t("detail.pinMismatch")}</div>}
                   <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                     <button onClick={handleSavePin} disabled={pinSaving || pinDraft.length !== 4} className="v-btn v-btn-sm v-btn-primary">
-                      {pinSaving ? "Saving…" : lockAfterPin ? "Save PIN & lock" : "Save PIN"}
+                      {pinSaving ? t("detail.saving") : lockAfterPin ? t("detail.savePinLock") : t("detail.savePin")}
                     </button>
-                    <button onClick={() => { setSettingPin(false); setLockAfterPin(false); setPinDraft(""); setPinConfirm(""); setPinConfirmError(false); }} className="v-btn v-btn-sm v-btn-quiet">Cancel</button>
+                    <button onClick={() => { setSettingPin(false); setLockAfterPin(false); setPinDraft(""); setPinConfirm(""); setPinConfirmError(false); }} className="v-btn v-btn-sm v-btn-quiet">{t("common.cancel")}</button>
                   </div>
                 </div>
               )}
@@ -288,19 +290,19 @@ export default function ProjectDetailModal({
               {isLocked && !notesUnlocked ? (
                 <div className="v-lockbox">
                   <ILock style={{ width: 22, height: 22, color: "var(--v-muted)" }} />
-                  <span style={{ color: "var(--v-muted)", fontSize: 14 }}>Enter your PIN to read these notes</span>
+                  <span style={{ color: "var(--v-muted)", fontSize: 14 }}>{t("detail.enterPin")}</span>
                   <input type="password" inputMode="numeric" maxLength={4} value={pinInput}
                     onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, "")); setPinError(false); }}
                     onKeyDown={(e) => { if (e.key === "Enter") tryUnlock(); }}
                     placeholder="····" className={`v-input v-pin-input${pinError ? " is-error" : ""}`} autoFocus />
-                  {pinError && <span className="v-error">Incorrect PIN.</span>}
-                  <button onClick={tryUnlock} className="v-btn v-btn-sm">Unlock</button>
+                  {pinError && <span className="v-error">{t("detail.wrongPin")}</span>}
+                  <button onClick={tryUnlock} className="v-btn v-btn-sm">{t("detail.unlock")}</button>
                 </div>
               ) : (
                 <>
                   <textarea value={notes} onChange={(e) => handleNotesChange(e.target.value)}
-                    placeholder="Key learnings, known issues, what you'd do differently…" rows={5} className="v-input" />
-                  <div className="v-hint" style={{ marginTop: 8 }}>Autosaves as you type</div>
+                    placeholder={t("detail.notesPh")} rows={5} className="v-input" />
+                  <div className="v-hint" style={{ marginTop: 8 }}>{t("detail.autosave")}</div>
                 </>
               )}
             </div>
@@ -309,18 +311,18 @@ export default function ProjectDetailModal({
           {(isOwner || showViewers) && (
             <div className="v-block">
               <button onClick={() => setViewersExpanded((v) => !v)} className="v-btn v-btn-sm v-btn-quiet" style={{ paddingLeft: 0 }}>
-                <IEye /> {totalViews} view{totalViews !== 1 ? "s" : ""} · {viewers.length} unique {viewersExpanded ? "▴" : "▾"}
+                <IEye /> {t("detail.views", { n: totalViews, u: viewers.length })} {viewersExpanded ? "▴" : "▾"}
               </button>
               {viewersExpanded && (
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--v-line)" }}>
                   {viewers.length === 0 ? (
-                    <p className="v-hint" style={{ padding: "12px 0" }}>No views yet.</p>
+                    <p className="v-hint" style={{ padding: "12px 0" }}>{t("detail.noViews")}</p>
                   ) : viewers.map((v, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid var(--v-line)" }}>
                       <span style={{ width: 28, height: 28, borderRadius: 8, display: "grid", placeItems: "center", background: "var(--v-panel-3)", fontFamily: "var(--v-display)", fontSize: 16 }}>{v.viewerName.charAt(0).toUpperCase()}</span>
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ display: "block", fontSize: 13 }}>{v.viewerId ? `@${v.viewerName}` : v.viewerName}</span>
-                        <span className="v-hint">Last seen {relativeTime(v.lastSeen)}</span>
+                        <span className="v-hint">{t("detail.lastSeen", { t: relativeTime(v.lastSeen) })}</span>
                       </span>
                       <span className="v-mono" style={{ color: "var(--v-signal)" }}>{v.count}×</span>
                     </div>

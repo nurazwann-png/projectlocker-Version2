@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { APPEARANCE_STORAGE_KEY as STORAGE_KEY, THEME_IDS } from "./appearanceBoot";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useUser } from "@clerk/nextjs";
+import { APPEARANCE_STORAGE_KEY as STORAGE_KEY, LANGS, THEME_IDS } from "./appearanceBoot";
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
@@ -26,12 +27,16 @@ export const THEMES: ThemeMeta[] = [
 
 export const ACCENTS = ["#0891b2", "#2563eb", "#7c3aed", "#c026d3", "#e11d48", "#ea580c", "#ca8a04", "#16a34a", "#0d9488"];
 
+export type Lang = (typeof LANGS)[number];
+
 export interface Appearance {
   theme: ThemeId;
   accent: string | null;
+  lite: boolean;
+  lang: Lang;
 }
 
-export const DEFAULT_APPEARANCE: Appearance = { theme: "daylight", accent: null };
+export const DEFAULT_APPEARANCE: Appearance = { theme: "daylight", accent: null, lite: false, lang: "en" };
 
 function hexToRgb(hex: string): string | null {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -53,6 +58,9 @@ function readableOn(hex: string): string {
 export function applyAppearance(a: Appearance) {
   const el = document.documentElement;
   el.dataset.vtheme = a.theme;
+  el.lang = a.lang;
+  if (a.lite) el.dataset.vlite = "1";
+  else delete el.dataset.vlite;
   const rgb = a.accent ? hexToRgb(a.accent) : null;
   if (a.accent && rgb) {
     el.style.setProperty("--v-c1", a.accent);
@@ -65,32 +73,62 @@ export function applyAppearance(a: Appearance) {
   }
 }
 
-function readAppearance(): Appearance {
-  try {
-    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null");
-    if (raw && THEMES.some((t) => t.id === raw.theme)) {
-      return { theme: raw.theme, accent: typeof raw.accent === "string" && hexToRgb(raw.accent) ? raw.accent : null };
-    }
-  } catch {
-    // storage unavailable or corrupt — fall back to default
-  }
-  return DEFAULT_APPEARANCE;
+function sanitize(raw: unknown): Appearance {
+  const r = (raw ?? {}) as Partial<Appearance>;
+  return {
+    theme: THEME_IDS.includes(r.theme as ThemeId) ? (r.theme as ThemeId) : DEFAULT_APPEARANCE.theme,
+    accent: typeof r.accent === "string" && hexToRgb(r.accent) ? r.accent : null,
+    lite: r.lite === true,
+    lang: LANGS.includes(r.lang as Lang) ? (r.lang as Lang) : DEFAULT_APPEARANCE.lang,
+  };
 }
 
-export function useAppearance() {
-  const [appearance, setAppearance] = useState<Appearance>(DEFAULT_APPEARANCE);
+// One module-level store so every component (picker, translated text, …) stays in sync.
+let current: Appearance = DEFAULT_APPEARANCE;
+let loaded = false;
+let pulledFromAccount = false;
+let accountTimer: ReturnType<typeof setTimeout> | null = null;
+const listeners = new Set<() => void>();
 
-  useEffect(() => { setAppearance(readAppearance()); }, []);
+function ensureLoaded() {
+  if (loaded || typeof window === "undefined") return;
+  loaded = true;
+  try { current = sanitize(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null")); } catch { /* defaults */ }
+}
+
+function setAppearance(next: Appearance) {
+  current = next;
+  applyAppearance(next);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+  listeners.forEach((l) => l());
+}
+
+const subscribe = (l: () => void) => { ensureLoaded(); listeners.add(l); return () => { listeners.delete(l); }; };
+const getSnapshot = () => { ensureLoaded(); return current; };
+const getServerSnapshot = () => DEFAULT_APPEARANCE;
+
+export function useAppearance() {
+  const appearance = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const { user } = useUser();
+
+  // Signed in: the account's saved appearance wins once per page load
+  useEffect(() => {
+    if (!user || pulledFromAccount) return;
+    pulledFromAccount = true;
+    const remote = (user.unsafeMetadata as { appearance?: unknown })?.appearance;
+    if (remote) setAppearance(sanitize(remote));
+  }, [user]);
 
   const update = useCallback((patch: Partial<Appearance>) => {
-    setAppearance((prev) => {
-      const next = { ...prev, ...patch };
-      applyAppearance(next);
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* private mode */ }
-      return next;
-    });
-  }, []);
+    const next = { ...current, ...patch };
+    setAppearance(next);
+    if (!user) return;
+    if (accountTimer) clearTimeout(accountTimer);
+    accountTimer = setTimeout(() => {
+      user.update({ unsafeMetadata: { ...user.unsafeMetadata, appearance: next } }).catch(() => {});
+    }, 700);
+  }, [user]);
 
-  return { appearance, update };
+  return { appearance, update, syncsToAccount: Boolean(user) };
 }
 

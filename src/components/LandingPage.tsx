@@ -5,10 +5,10 @@ import Link from "next/link";
 import Cover from "@/components/Cover";
 import StatusBadge from "@/components/StatusBadge";
 import ThemePicker from "@/components/ThemePicker";
+import { useT } from "@/lib/i18n";
 import type { ProjectStatus } from "@/types/project";
 import { IArrowUpRight, ICamera, ICopy, IEye, ILock, IPlus, LockerMark } from "@/components/icons";
 
-const WORDS = ["one place.", "the vault.", "orbit.", "the spotlight."];
 
 const DEMO: { name: string; stack: string; status: ProjectStatus }[] = [
   { name: "PRESTIJ Hub", stack: "Next.js / Neon", status: "Live" },
@@ -111,16 +111,18 @@ export default function LandingPage() {
   const [wordOut, setWordOut] = useState(false);
   const stats = useInView<HTMLDivElement>(0.35);
   const year = new Date().getFullYear();
+  const t = useT();
+  const words = t("lx.words").split("|");
 
   useRevealAll(rootRef);
 
   useEffect(() => {
-    let t: ReturnType<typeof setTimeout>;
+    let timer: ReturnType<typeof setTimeout>;
     const id = setInterval(() => {
       setWordOut(true);
-      t = setTimeout(() => { setWordIdx((i) => (i + 1) % WORDS.length); setWordOut(false); }, 380);
+      timer = setTimeout(() => { setWordIdx((i) => i + 1); setWordOut(false); }, 380);
     }, 2800);
-    return () => { clearInterval(id); clearTimeout(t); };
+    return () => { clearInterval(id); clearTimeout(timer); };
   }, []);
 
   // Scroll: progress bar + the app window "unfolds" from tilted to flat
@@ -161,13 +163,13 @@ export default function LandingPage() {
             <span className="v-brand-name">Locker</span>
           </Link>
           <div className="lx-nav-links">
-            <a href="#features">Features</a>
-            <a href="#how">How it works</a>
-            <a href="#start">Get started</a>
+            <a href="#features">{t("nav.features")}</a>
+            <a href="#how">{t("nav.how")}</a>
+            <a href="#start">{t("nav.start")}</a>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
-            <Link href="/" className="v-btn v-btn-sm v-btn-primary">Enter app <IArrowUpRight /></Link>
+            <Link href="/" className="v-btn v-btn-sm v-btn-primary">{t("nav.enterApp")} <IArrowUpRight /></Link>
           </div>
         </div>
       </nav>
@@ -184,24 +186,21 @@ export default function LandingPage() {
 
         <div className="v-wrap" style={{ position: "relative", zIndex: 2, width: "100%" }}>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <span className="v-eyebrow v-rise">Personal app locker</span>
+            <span className="v-eyebrow v-rise">{t("lx.eyebrow")}</span>
           </div>
           <h1 className="lx-title" style={{ marginTop: 22 }}>
-            <span className="v-line" style={{ animationDelay: "80ms" }}>Every app you ship,</span>
+            <span className="v-line" style={{ animationDelay: "80ms" }}>{t("lx.l1")}</span>
             <span className="v-line" style={{ animationDelay: "200ms" }}>
-              kept in{" "}
+              {t("lx.l2")}{" "}
               <span className={`lx-word v-grad-text ${wordOut ? "is-out" : "is-in"}`} key={wordIdx} style={{ filter: "drop-shadow(0 0 30px rgba(var(--v-c2-rgb),0.45))" }}>
-                {WORDS[wordIdx]}
+                {words[wordIdx % words.length]}
               </span>
             </span>
           </h1>
-          <p className="lx-sub v-rise" style={{ animationDelay: "320ms" }}>
-            Log, organise and showcase everything you&apos;ve built — live links, repos, tech stacks
-            and screenshots, in one luminous index.
-          </p>
+          <p className="lx-sub v-rise" style={{ animationDelay: "320ms" }}>{t("lx.sub")}</p>
           <div className="lx-ctas v-rise" style={{ animationDelay: "420ms" }}>
-            <Link href="/" className="v-btn v-btn-lg v-btn-primary">Enter the locker <IArrowUpRight /></Link>
-            <a href="#features" className="v-btn v-btn-lg">See what&apos;s inside</a>
+            <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
+            <a href="#features" className="v-btn v-btn-lg">{t("lx.inside")}</a>
           </div>
 
           <div className="lx-stage v-rise" ref={stageRef} style={{ animationDelay: "560ms" }}>
@@ -209,7 +208,7 @@ export default function LandingPage() {
               <div className="lx-window-bar">
                 <div className="lx-dots"><i /><i /><i /></div>
                 <div className="lx-url">locker / nurazwann</div>
-                <span className="v-mono" style={{ fontSize: 10, color: "var(--v-signal)" }}>06 ENTRIES</span>
+                <span className="v-mono" style={{ fontSize: 10, color: "var(--v-signal)" }}>{t("lx.entries", { n: "06" })}</span>
               </div>
               <div className="lx-window-body">
                 {DEMO.map((d, i) => (
@@ -244,9 +243,9 @@ export default function LandingPage() {
         <section className="lx-section" style={{ paddingTop: "clamp(72px, 9vw, 110px)" }}>
           <div className="lx-stats" ref={stats.ref}>
             {[
-              { n: 100, s: "%", l: "Yours. Private by default.", c: "var(--v-c1)" },
-              { n: 2, s: " min", l: "To log your first app", c: "var(--v-c2)" },
-              { n: 3, s: " views", l: "Grid · list · timeline", c: "var(--v-c3)" },
+              { n: 100, s: "%", l: t("lx.stat1"), c: "var(--v-c1)" },
+              { n: 2, s: t("lx.stat2s"), l: t("lx.stat2"), c: "var(--v-c2)" },
+              { n: 3, s: t("lx.stat3s"), l: t("lx.stat3"), c: "var(--v-c3)" },
             ].map((x, i) => (
               <div key={x.l} className="lx-stat v-hud lx-reveal" style={{ "--hud": x.c, transitionDelay: `${i * 100}ms` } as CSSProperties}>
                 <div className="lx-stat-num" style={{ color: x.c, textShadow: `0 0 40px color-mix(in oklab, ${x.c} 50%, transparent)` }}><CountUp to={x.n} active={stats.inView} suffix={x.s} /></div>
@@ -258,12 +257,12 @@ export default function LandingPage() {
 
         {/* ── Features ── */}
         <section className="lx-section" id="features">
-          <span className="v-eyebrow lx-reveal">Capabilities</span>
-          <h2 className="lx-h2 lx-reveal">Built for people who <span className="v-grad-text">ship things.</span></h2>
-          <p className="lx-lead lx-reveal">Everything you need to keep a living record of your work — and show it off.</p>
+          <span className="v-eyebrow lx-reveal">{t("lx.capEyebrow")}</span>
+          <h2 className="lx-h2 lx-reveal">{t("lx.capTitle")} <span className="v-grad-text">{t("lx.capTitleEm")}</span></h2>
+          <p className="lx-lead lx-reveal">{t("lx.capLead")}</p>
 
           <div className="lx-bento">
-            <Feature wide delay={0} accent="var(--v-c1)" icon={<IPlus />} title="Log every app" desc="Name, story, deploy date, stack and screenshots — each project gets a permanent entry number in your index.">
+            <Feature wide delay={0} accent="var(--v-c1)" icon={<IPlus />} title={t("lx.f1")} desc={t("lx.f1d")}>
               <div className="lx-feat-demo">
                 {DEMO.slice(0, 3).map((d, i) => (
                   <div key={d.name} className="lx-demo-row">
@@ -273,15 +272,15 @@ export default function LandingPage() {
                 ))}
               </div>
             </Feature>
-            <Feature delay={80} accent="var(--v-c3)" icon={<IArrowUpRight />} title="Live links & repos" desc="One click to visit the deployed app or review its source." />
-            <Feature delay={0} accent="var(--v-live)" icon={<IPulse />} title="Status at a glance" desc="Live, Maintenance or Deprecated — with a health score that ages honestly." />
-            <Feature delay={80} accent="var(--v-amber)" icon={<ICamera />} title="Covers & screenshots" desc="Upload a screenshot or let Locker generate a neon cover for you." />
-            <Feature delay={160} accent="var(--v-c2)" icon={<ILock />} title="PIN-locked notes" desc="A private dev journal per app — learnings, issues, ideas — behind a 4-digit PIN." />
-            <Feature full delay={0} accent="var(--v-c1)" icon={<IEye />} title="A public portfolio" desc="Share your /u/username page — a read-only gallery of everything you've shipped, with view counts.">
+            <Feature delay={80} accent="var(--v-c3)" icon={<IArrowUpRight />} title={t("lx.f2")} desc={t("lx.f2d")} />
+            <Feature delay={0} accent="var(--v-live)" icon={<IPulse />} title={t("lx.f3")} desc={t("lx.f3d")} />
+            <Feature delay={80} accent="var(--v-amber)" icon={<ICamera />} title={t("lx.f4")} desc={t("lx.f4d")} />
+            <Feature delay={160} accent="var(--v-c2)" icon={<ILock />} title={t("lx.f5")} desc={t("lx.f5d")} />
+            <Feature full delay={0} accent="var(--v-c1)" icon={<IEye />} title={t("lx.f6")} desc={t("lx.f6d")}>
               <div className="lx-feat-demo">
                 <div className="lx-demo-row">
                   <span><span style={{ color: "var(--v-faint)" }}>https://</span>locker.app/u/<span style={{ color: "var(--v-signal)" }}>nurazwann</span></span>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--v-text)" }}><ICopy style={{ width: 13, height: 13 }} /> COPY</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--v-text)" }}><ICopy style={{ width: 13, height: 13 }} /> {t("lx.copy").toUpperCase()}</span>
                 </div>
               </div>
             </Feature>
@@ -290,17 +289,17 @@ export default function LandingPage() {
 
         {/* ── How it works ── */}
         <section className="lx-section" id="how">
-          <span className="v-eyebrow lx-reveal">Protocol</span>
-          <h2 className="lx-h2 lx-reveal">Three steps to a <span className="v-grad-text">full locker.</span></h2>
+          <span className="v-eyebrow lx-reveal">{t("lx.protoEyebrow")}</span>
+          <h2 className="lx-h2 lx-reveal">{t("lx.protoTitle")} <span className="v-grad-text">{t("lx.protoTitleEm")}</span></h2>
           <div className="lx-steps">
             {[
-              { t: "Open the locker", d: "Jump straight in. Your index is ready the moment you arrive." },
-              { t: "Log your apps", d: "Add each app with its URL, repo, stack and a screenshot." },
-              { t: "Share the link", d: "Send your /u/username page and let the work speak." },
+              { title: t("lx.st1"), d: t("lx.st1d") },
+              { title: t("lx.st2"), d: t("lx.st2d") },
+              { title: t("lx.st3"), d: t("lx.st3d") },
             ].map((s, i) => (
-              <div key={s.t} className="lx-step lx-reveal" style={{ transitionDelay: `${i * 120}ms` }}>
+              <div key={i} className="lx-step lx-reveal" style={{ transitionDelay: `${i * 120}ms` }}>
                 <div className="lx-step-node">0{i + 1}</div>
-                <h3>{s.t}</h3>
+                <h3>{s.title}</h3>
                 <p>{s.d}</p>
               </div>
             ))}
@@ -310,13 +309,13 @@ export default function LandingPage() {
         {/* ── CTA ── */}
         <section className="lx-cta v-hud lx-reveal" id="start">
           <div className="v-floor" />
-          <span className="v-eyebrow" style={{ position: "relative" }}>Ready when you are</span>
+          <span className="v-eyebrow" style={{ position: "relative" }}>{t("lx.ctaEyebrow")}</span>
           <h2 className="lx-cta-title" style={{ marginTop: 20 }}>
-            Start locking<br /><span className="v-grad-text">your apps.</span>
+            {t("lx.ctaL1")}<br /><span className="v-grad-text">{t("lx.ctaL2")}</span>
           </h2>
-          <p className="lx-sub" style={{ position: "relative" }}>Never lose track of what you&apos;ve built again.</p>
+          <p className="lx-sub" style={{ position: "relative" }}>{t("lx.ctaSub")}</p>
           <div className="lx-ctas" style={{ position: "relative" }}>
-            <Link href="/" className="v-btn v-btn-lg v-btn-primary">Enter the locker <IArrowUpRight /></Link>
+            <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
           </div>
         </section>
       </main>
@@ -325,7 +324,7 @@ export default function LandingPage() {
         <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
         <div className="v-wrap v-footer-inner">
           <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
-          <span className="v-mono" style={{ color: "var(--v-faint)" }}>All rights reserved</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>{t("common.rights")}</span>
         </div>
       </footer>
     </div>

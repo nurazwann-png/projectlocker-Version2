@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from "react";
 import type { Project, ProjectFormData, ProjectStatus } from "@/types/project";
 import { STATUS_CLASS } from "@/lib/projectMeta";
-import { ICamera, IPlus, IX } from "./icons";
+import { ICamera, IGlobe, IPlus, IX } from "./icons";
+import { useT, type TKey } from "@/lib/i18n";
+import { liveScreenshotUrl } from "./Cover";
 
 const EMPTY_FORM: ProjectFormData = {
   name: "",
@@ -25,20 +27,21 @@ interface ProjectModalProps {
   onSave: (data: ProjectFormData) => void;
 }
 
-type FormErrors = Partial<Record<keyof ProjectFormData, string>>;
+type FormErrors = Partial<Record<keyof ProjectFormData, TKey>>;
 
 function validate(data: ProjectFormData): FormErrors {
   const errors: FormErrors = {};
-  if (!data.name.trim()) errors.name = "Give it a name.";
-  if (!data.description.trim()) errors.description = "A one-line description helps.";
-  if (!data.deploymentDate) errors.deploymentDate = "When did it ship?";
-  if (data.techStack.length === 0) errors.techStack = "Add at least one technology.";
+  if (!data.name.trim()) errors.name = "form.errName";
+  if (!data.description.trim()) errors.description = "form.errDesc";
+  if (!data.deploymentDate) errors.deploymentDate = "form.errDate";
+  if (data.techStack.length === 0) errors.techStack = "form.errStack";
   return errors;
 }
 
 const STATUSES: ProjectStatus[] = ["Live", "Maintenance", "Deprecated"];
 
 export default function ProjectModal({ isOpen, project, onClose, onSave }: ProjectModalProps) {
+  const t = useT();
   const [form, setForm] = useState<ProjectFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
   const [tagInput, setTagInput] = useState("");
@@ -137,46 +140,46 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
       <div className="v-backdrop" onClick={onClose} />
       <form className="v-drawer" onSubmit={handleSubmit} noValidate>
         <div className="v-drawer-head">
-          <span className="v-eyebrow">{isEditing ? "Edit entry" : "New entry"}</span>
+          <span className="v-eyebrow">{isEditing ? t("form.editEntry") : t("form.newEntry")}</span>
           <button type="button" onClick={onClose} className="v-icon-btn" aria-label="Close"><IX /></button>
         </div>
 
         <div className="v-drawer-body">
           <div className="v-form-intro">
             <h2 id="pm-title" className="v-form-title">
-              {isEditing ? <>Refine <em>the record.</em></> : <>Lock in <em>a project.</em></>}
+              {isEditing ? <>{t("form.editTitle")} <em>{t("form.editTitleEm")}</em></> : <>{t("form.newTitle")} <em>{t("form.newTitleEm")}</em></>}
             </h2>
             <p style={{ color: "var(--v-muted)", marginTop: 14, fontSize: 14.5, lineHeight: 1.6 }}>
-              {isEditing ? "Update anything below — changes save when you hit Save." : "Four required fields. Everything else makes it shine."}
+              {isEditing ? t("form.editSub") : t("form.newSub")}
             </p>
           </div>
 
-          <Section no="01" title="Identity" hint="What it is, in plain words.">
-            <Field label="Project name" required error={errors.name}>
+          <Section no="01" title={t("form.identity")} hint={t("form.identityHint")}>
+            <Field label={t("form.name")} required error={errors.name && t(errors.name)}>
               <input ref={firstInputRef} type="text" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. PRESTIJ 4 MOE Hub" className={`v-input${errors.name ? " is-error" : ""}`} />
             </Field>
-            <Field label="Description" required error={errors.description} hint={`${form.description.length}/280`}>
-              <textarea value={form.description} onChange={(e) => set("description", e.target.value.slice(0, 280))} placeholder="What does it do, and who is it for?" rows={3} className={`v-input${errors.description ? " is-error" : ""}`} />
+            <Field label={t("form.desc")} required error={errors.description && t(errors.description)} hint={`${form.description.length}/280`}>
+              <textarea value={form.description} onChange={(e) => set("description", e.target.value.slice(0, 280))} placeholder={t("form.descPh")} rows={3} className={`v-input${errors.description ? " is-error" : ""}`} />
             </Field>
           </Section>
 
-          <Section no="02" title="Status" hint="Where it stands today.">
-            <Field label="Current state" required>
+          <Section no="02" title={t("form.status")} hint={t("form.statusHint")}>
+            <Field label={t("form.state")} required>
               <div className="v-status-pick" role="radiogroup" aria-label="Status">
                 {STATUSES.map((s) => (
                   <button key={s} type="button" role="radio" aria-checked={form.status === s} aria-pressed={form.status === s} onClick={() => set("status", s)}>
-                    <span className={`v-led ${STATUS_CLASS[s]}`} />{s}
+                    <span className={`v-led ${STATUS_CLASS[s]}`} />{t(`status.${s}`)}
                   </button>
                 ))}
               </div>
             </Field>
-            <Field label="Shipped on" required error={errors.deploymentDate}>
+            <Field label={t("form.shipped")} required error={errors.deploymentDate && t(errors.deploymentDate)}>
               <input type="date" value={form.deploymentDate} onChange={(e) => set("deploymentDate", e.target.value)} className={`v-input${errors.deploymentDate ? " is-error" : ""}`} style={{ maxWidth: 240 }} />
             </Field>
           </Section>
 
-          <Section no="03" title="Stack" hint="Press Enter or comma after each one.">
-            <Field label="Technologies" required error={errors.techStack}>
+          <Section no="03" title={t("form.stack")} hint={t("form.stackHint")}>
+            <Field label={t("form.tech")} required error={errors.techStack && t(errors.techStack)}>
               <div className={`v-taginput${errors.techStack ? " is-error" : ""}`} onClick={() => tagInputRef.current?.focus()}>
                 {form.techStack.map((tag) => (
                   <span key={tag} className="v-chip">
@@ -191,44 +194,51 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
                   onChange={handleTagChange}
                   onKeyDown={handleTagKeyDown}
                   onBlur={() => { if (tagInput.trim()) commitTag(tagInput); }}
-                  placeholder={form.techStack.length === 0 ? "Next.js, TypeScript, Postgres…" : "Add another…"}
+                  placeholder={form.techStack.length === 0 ? "Next.js, TypeScript, Postgres…" : t("form.techMore")}
                   aria-label="Add technology"
                 />
               </div>
             </Field>
           </Section>
 
-          <Section no="04" title="Links" hint="Where people can see it.">
-            <Field label="Live URL">
+          <Section no="04" title={t("form.links")} hint={t("form.linksHint")}>
+            <Field label={t("form.liveUrl")}>
               <input type="url" value={form.liveUrl} onChange={(e) => set("liveUrl", e.target.value)} placeholder="https://" className="v-input" />
             </Field>
-            <Field label="Repository / review link">
+            <Field label={t("form.repoUrl")}>
               <input type="url" value={form.repoUrl} onChange={(e) => set("repoUrl", e.target.value)} placeholder="https://github.com/…" className="v-input" />
             </Field>
           </Section>
 
-          <Section no="05" title="Cover" hint="A screenshot. We’ll compress it for you.">
+          <Section no="05" title={t("form.cover")} hint={t("form.coverHint")}>
             <button type="button" className="v-dropzone" onClick={() => thumbnailInputRef.current?.click()} disabled={thumbnailUploading}>
               {form.thumbnail ? (
                 <img src={form.thumbnail} alt="Cover preview" />
               ) : (
                 <span className="v-dropzone-inner">
                   <ICamera />
-                  <span>{thumbnailUploading ? "Processing…" : "Click to upload a screenshot"}</span>
+                  <span>{thumbnailUploading ? t("form.processing") : t("form.upload")}</span>
                   <span className="v-hint">PNG · JPG · up to 1280×720</span>
                 </span>
               )}
             </button>
-            {form.thumbnail && (
-              <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button type="button" className="v-btn v-btn-sm" onClick={() => thumbnailInputRef.current?.click()}><ICamera /> Replace</button>
-                <button type="button" className="v-btn v-btn-sm v-btn-quiet" onClick={() => set("thumbnail", null)}>Remove</button>
-              </div>
-            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              {form.thumbnail && <button type="button" className="v-btn v-btn-sm" onClick={() => thumbnailInputRef.current?.click()}><ICamera /> {t("common.replace")}</button>}
+              <button
+                type="button"
+                className="v-btn v-btn-sm"
+                disabled={!liveScreenshotUrl(form.liveUrl)}
+                title={liveScreenshotUrl(form.liveUrl) ? undefined : t("form.captureHint")}
+                onClick={() => set("thumbnail", liveScreenshotUrl(form.liveUrl))}
+              >
+                <IGlobe /> {t("form.capture")}
+              </button>
+              {form.thumbnail && <button type="button" className="v-btn v-btn-sm v-btn-quiet" onClick={() => set("thumbnail", null)}>{t("common.remove")}</button>}
+            </div>
             <input ref={thumbnailInputRef} type="file" accept="image/*" className="hidden" onChange={handleThumbnailUpload} />
           </Section>
 
-          <Section no="06" title="Highlights" hint="Up to eight things worth bragging about.">
+          <Section no="06" title={t("form.highlights")} hint={t("form.highlightsHint")}>
             {form.features.map((f, i) => (
               <div key={i} className="v-feature-row">
                 <span className="v-feature-no">{String(i + 1).padStart(2, "0")}</span>
@@ -245,7 +255,7 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
             ))}
             {form.features.length < 8 && (
               <button type="button" className="v-btn v-btn-sm" style={{ marginTop: form.features.length ? 12 : 0, borderStyle: "dashed" }} onClick={() => set("features", [...form.features, ""])}>
-                <IPlus /> Add highlight
+                <IPlus /> {t("form.addHighlight")}
               </button>
             )}
           </Section>
@@ -253,11 +263,11 @@ export default function ProjectModal({ isOpen, project, onClose, onSave }: Proje
 
         <div className="v-drawer-foot">
           <span className="v-mono" style={{ color: errorCount ? "var(--v-coral)" : "var(--v-faint)" }}>
-            {errorCount ? `${errorCount} field${errorCount > 1 ? "s" : ""} need attention` : "Esc to cancel"}
+            {errorCount ? t("form.needsAttention", { n: errorCount }) : t("form.escCancel")}
           </span>
           <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" onClick={onClose} className="v-btn">Cancel</button>
-            <button type="submit" className="v-btn v-btn-primary">{isEditing ? "Save changes" : "Lock it in"}</button>
+            <button type="button" onClick={onClose} className="v-btn">{t("common.cancel")}</button>
+            <button type="submit" className="v-btn v-btn-primary">{isEditing ? t("form.saveChanges") : t("form.lockIn")}</button>
           </div>
         </div>
       </form>

@@ -2,11 +2,13 @@
 
 import { useMemo } from "react";
 import type { Project } from "@/types/project";
+import { useT } from "@/lib/i18n";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const LEVELS = ["rgba(var(--v-ink-rgb),0.09)", "rgba(var(--v-c1-rgb),0.35)", "var(--v-c1)", "var(--v-c2)", "var(--v-c3)"];
 
 export default function ActivityHeatmap({ projects }: { projects: Project[] }) {
+  const t = useT();
   const { cells, monthLabels, maxCount, total } = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const p of projects) {
@@ -55,13 +57,13 @@ export default function ActivityHeatmap({ projects }: { projects: Project[] }) {
   return (
     <section className="v-heat v-hud v-rise" style={{ animationDelay: "500ms" }} aria-label="Shipping activity over the last year">
       <div className="v-heat-head">
-        <span className="v-eyebrow">Shipping activity · 52 weeks</span>
+        <span className="v-eyebrow">{t("heat.title")}</span>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span className="v-mono" style={{ color: "var(--v-text)" }}>{String(total).padStart(2, "0")} <span style={{ color: "var(--v-faint)" }}>shipped in 12 months</span></span>
+          <span className="v-mono" style={{ color: "var(--v-text)" }}>{String(total).padStart(2, "0")} <span style={{ color: "var(--v-faint)" }}>{t("heat.count")}</span></span>
           <span className="v-heat-legend">
-            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginRight: 4 }}>Less</span>
+            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginRight: 4 }}>{t("heat.less")}</span>
             {LEVELS.map((c) => <i key={c} style={{ background: c }} />)}
-            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginLeft: 4 }}>More</span>
+            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginLeft: 4 }}>{t("heat.more")}</span>
           </span>
         </div>
       </div>
