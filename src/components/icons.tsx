@@ -49,18 +49,24 @@ export const IGithub = (p: P) => (
 
 export function LockerMark(p: P) {
   return (
-    <svg viewBox="0 0 28 28" fill="none" aria-hidden {...p}>
+    <svg viewBox="0 0 1024 1024" fill="none" aria-hidden {...p}>
       <defs>
-        <linearGradient id="locker-mark-grad" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+        <linearGradient id="locker-mark-grad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" style={{ stopColor: "var(--v-c1)" }} />
           <stop offset="0.5" style={{ stopColor: "var(--v-c2)" }} />
           <stop offset="1" style={{ stopColor: "var(--v-c3)" }} />
         </linearGradient>
       </defs>
-      <rect x="1" y="1" width="26" height="26" rx="7.5" fill="url(#locker-mark-grad)" />
-      <circle cx="14" cy="12" r="3.1" fill="var(--v-bg)" />
-      <path d="M12.7 14.2h2.6l.85 6h-4.3l.85-6Z" fill="var(--v-bg)" />
-      <circle cx="21.5" cy="6.5" r="1.7" fill="#fff" />
+      {/* Same mark as the app icon (public/icon.svg), tinted by the active theme */}
+      <rect width="1024" height="1024" rx="232" fill="url(#locker-mark-grad)" />
+      <rect x="322" y="232" width="380" height="560" rx="70" fill="#fff" fillOpacity="0.16" stroke="#fff" strokeWidth="48" />
+      <g stroke="#fff" strokeWidth="34" strokeLinecap="round" strokeOpacity="0.92">
+        <line x1="394" y1="324" x2="560" y2="324" />
+        <line x1="394" y1="384" x2="520" y2="384" />
+      </g>
+      <circle cx="512" cy="548" r="70" fill="#fff" />
+      <path d="M480 590 H544 L566 702 H458 Z" fill="#fff" />
+      <circle cx="630" cy="324" r="30" fill="#3dffa8" stroke="#fff" strokeWidth="8" />
     </svg>
   );
 }

@@ -22,19 +22,40 @@
       "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
-  "categories": ["productivity", "developer"],
+  "categories": [
+    "productivity",
+    "developer"
+  ],
   "shortcuts": [
     {
       "name": "New Project",
       "short_name": "New",
       "description": "Add a new project",
-      "url": "/?action=new"
+      "url": "/?action=new",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

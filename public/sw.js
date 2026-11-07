@@ -1,5 +1,5 @@
-const CACHE = 'projectlocker-v1';
-const STATIC = ['/', '/bg.jpg', '/icon.svg', '/icon-maskable.svg', '/manifest.json'];
+const CACHE = 'projectlocker-v2';
+const STATIC = ['/', '/icon.svg', '/icon-192.png', '/icon-512.png', '/icon-maskable-512.png', '/apple-touch-icon.png', '/manifest.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(STATIC).catch(() => {})));
