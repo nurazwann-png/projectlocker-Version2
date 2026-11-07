@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
-// Open to everyone for now — sign-in will be required again later.
 export async function GET() {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Sign in to view the community" }, { status: 401 });
+
   const profiles = await prisma.profile.findMany({
     where: { username: { not: null } },
     orderBy: { createdAt: "desc" },
