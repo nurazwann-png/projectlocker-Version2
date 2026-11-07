@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
 import Cover from "@/components/Cover";
 import StatusBadge from "@/components/StatusBadge";
 import ThemePicker from "@/components/ThemePicker";
@@ -112,6 +113,7 @@ export default function LandingPage() {
   const stats = useInView<HTMLDivElement>(0.35);
   const year = new Date().getFullYear();
   const t = useT();
+  const { isLoaded, isSignedIn } = useUser();
   const words = t("lx.words").split("|");
 
   useRevealAll(rootRef);
@@ -169,6 +171,12 @@ export default function LandingPage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
+            {isLoaded && !isSignedIn && (
+              <SignInButton mode="modal" forceRedirectUrl="/">
+                <button className="v-btn v-btn-sm v-btn-quiet v-hide-xs">{t("nav.login")}</button>
+              </SignInButton>
+            )}
+            {isSignedIn && <UserButton />}
             <Link href="/" className="v-btn v-btn-sm v-btn-primary">{t("nav.enterApp")} <IArrowUpRight /></Link>
           </div>
         </div>
@@ -200,7 +208,13 @@ export default function LandingPage() {
           <p className="lx-sub v-rise" style={{ animationDelay: "320ms" }}>{t("lx.sub")}</p>
           <div className="lx-ctas v-rise" style={{ animationDelay: "420ms" }}>
             <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
-            <a href="#features" className="v-btn v-btn-lg">{t("lx.inside")}</a>
+            {isLoaded && !isSignedIn ? (
+              <SignInButton mode="modal" forceRedirectUrl="/">
+                <button className="v-btn v-btn-lg">{t("nav.login")}</button>
+              </SignInButton>
+            ) : (
+              <a href="#features" className="v-btn v-btn-lg">{t("lx.inside")}</a>
+            )}
           </div>
 
           <div className="lx-stage v-rise" ref={stageRef} style={{ animationDelay: "560ms" }}>
@@ -316,6 +330,11 @@ export default function LandingPage() {
           <p className="lx-sub" style={{ position: "relative" }}>{t("lx.ctaSub")}</p>
           <div className="lx-ctas" style={{ position: "relative" }}>
             <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
+            {isLoaded && !isSignedIn && (
+              <SignUpButton mode="modal" forceRedirectUrl="/">
+                <button className="v-btn v-btn-lg">{t("nav.signUp")}</button>
+              </SignUpButton>
+            )}
           </div>
         </section>
       </main>
