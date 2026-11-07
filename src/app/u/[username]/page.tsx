@@ -5,13 +5,17 @@ import { use } from "react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import type { Project, ProjectStatus } from "@/types/project";
-import type { ProfileData, ProfileLinks, CoverPosition } from "@/hooks/useProfile";
+import type { ProfileData, ProfileLinks } from "@/hooks/useProfile";
 import ProjectCard from "@/components/ProjectCard";
 import ProjectDetailModal from "@/components/ProjectDetailModal";
-import ProfileHeader from "@/components/ProfileHeader";
 import SearchBar, { type SortOption } from "@/components/SearchBar";
 import TagCloud from "@/components/TagCloud";
 import TimelineView from "@/components/TimelineView";
+import StatusBadge from "@/components/StatusBadge";
+import Cover from "@/components/Cover";
+import ThemePicker from "@/components/ThemePicker";
+import { formatDate, monogram, pad } from "@/lib/projectMeta";
+import { IArrowUpRight, IEye, IGithub, LockerMark } from "@/components/icons";
 
 const EMPTY_PROFILE: ProfileData & { username?: string | null } = {
   bio: "",
@@ -24,6 +28,29 @@ const EMPTY_PROFILE: ProfileData & { username?: string | null } = {
 };
 
 type ViewMode = "grid" | "list" | "timeline";
+
+function PageShell({ username, children }: { username: string; children: React.ReactNode }) {
+  return (
+    <div className="vault">
+      <div className="v-atmos" />
+      <div className="v-noise" />
+      <nav className="v-nav">
+        <div className="v-wrap v-nav-inner">
+          <Link href="/landing" className="v-brand" aria-label="Locker">
+            <LockerMark className="v-brand-mark" />
+            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-path">/ u / {username}</span>
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <ThemePicker />
+            <Link href="/community" className="v-btn v-btn-sm">Community <IArrowUpRight /></Link>
+          </div>
+        </div>
+      </nav>
+      {children}
+    </div>
+  );
+}
 
 export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
@@ -50,7 +77,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
         if (pRes.status === 404) { setNotFound(true); return; }
         const pData = await pRes.json();
         const prData = await prRes.json();
-        const ownerId: string | undefined = pData.ownerId ?? undefined;
         setProfile({
           bio: pData.bio ?? "",
           cover: pData.coverUrl ?? null,
@@ -59,7 +85,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           links: (pData.links as ProfileLinks) ?? {},
           skills: (pData.skills as string[]) ?? [],
           username: pData.username ?? username,
-          ownerId,
+          ownerId: pData.ownerId ?? undefined,
           viewerIsAdmin: pData.viewerIsAdmin ?? false,
         });
         if (pData.preferredView) setViewMode(pData.preferredView as ViewMode);
@@ -96,140 +122,159 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
     if (tagFilter) list = list.filter((p) => (p.techStack ?? []).includes(tagFilter));
     if (query) {
       const q = query.toLowerCase();
-      list = list.filter((p) => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
+      list = list.filter((p) => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q) || p.techStack.some((t) => t.toLowerCase().includes(q)));
     }
-    if (sort === "oldest") list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    if (sort === "oldest") list.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     else if (sort === "az") list.sort((a, b) => a.name.localeCompare(b.name));
-    else list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    else if (sort === "status") list.sort((a, b) => a.status.localeCompare(b.status));
+    else list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
     return list;
-  }, [projects, query, sort, tagFilter]);
+  }, [projects, query, sort, tagFilter, statusFilter]);
 
-  const pageBg: import("react").CSSProperties = {
-    backgroundImage: "url('/bg.jpg')",
-    backgroundSize: "cover",
-    backgroundPosition: "center top",
-    backgroundAttachment: "fixed",
-    backgroundColor: "#eeeaff",
-  };
+  const entryNo = useMemo(() => {
+    const m = new Map<string, number>();
+    [...projects].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach((p, i) => m.set(p.id, i + 1));
+    return m;
+  }, [projects]);
+
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = { "": projects.length, Live: 0, Maintenance: 0, Deprecated: 0 };
+    for (const p of projects) c[p.status] = (c[p.status] ?? 0) + 1;
+    return c;
+  }, [projects]);
+
+  const techCount = useMemo(() => new Set(projects.flatMap((p) => p.techStack)).size, [projects]);
+  const displayName = profile.username ?? username;
+  const year = new Date().getFullYear();
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={pageBg}>
-      <div className="flex flex-col items-center gap-3">
-        <svg className="h-8 w-8 animate-spin text-violet-500" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-        </svg>
-        <p className="text-sm" style={{ color: "#9693b8" }}>Loading profile…</p>
+    <PageShell username={username}>
+      <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+          <div className="px-spinner" />
+          <span className="v-mono" style={{ color: "var(--v-signal)" }}>Decrypting locker…</span>
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 
   if (notFound) return (
-    <div className="min-h-screen flex items-center justify-center" style={pageBg}>
-      <div className="text-center">
-        <p className="text-6xl mb-4">404</p>
-        <h1 className="text-2xl font-bold mb-2" style={{ color: "#0d0b1e", fontFamily: "'Syne', system-ui, sans-serif" }}>Profile not found</h1>
-        <p className="text-sm" style={{ color: "#9693b8" }}>No user found at <span className="font-mono">/u/{username}</span></p>
+    <PageShell username={username}>
+      <div style={{ minHeight: "70vh", display: "grid", placeItems: "center", position: "relative", zIndex: 1, textAlign: "center", padding: 24 }}>
+        <div>
+          <div className="v-display v-grad-text" style={{ fontSize: "clamp(96px, 20vw, 200px)", lineHeight: 0.9, fontWeight: 700 }}>404</div>
+          <h1 className="v-display" style={{ fontSize: 28, marginTop: 18 }}>Locker not found</h1>
+          <p style={{ color: "var(--v-muted)", marginTop: 10 }}>No one is registered at <span style={{ fontFamily: "var(--v-mono)", color: "var(--v-signal)" }}>/u/{username}</span>.</p>
+          <Link href="/community" className="v-btn" style={{ marginTop: 24 }}>Browse the community <IArrowUpRight /></Link>
+        </div>
       </div>
-    </div>
+    </PageShell>
   );
 
+  const links = [
+    profile.links.github && { href: profile.links.github, label: "GitHub", icon: <IGithub /> },
+    profile.links.linkedin && { href: profile.links.linkedin, label: "LinkedIn", icon: <IArrowUpRight /> },
+    profile.links.website && { href: profile.links.website, label: "Website", icon: <IArrowUpRight /> },
+  ].filter(Boolean) as { href: string; label: string; icon: React.ReactNode }[];
+
   return (
-    <div className="min-h-screen" style={pageBg}>
-      {/* "Viewing portfolio" banner */}
-      <div className="flex items-center justify-between px-4 py-2 text-xs font-medium" style={{ background: "rgba(124,58,237,0.08)", borderBottom: "1px solid rgba(124,58,237,0.12)", color: "#7c3aed" }}>
-        <div className="flex items-center gap-2">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-            <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
-          </svg>
-          You&apos;re viewing <span className="font-semibold ml-1">@{username}</span>&apos;s portfolio · view only
+    <PageShell username={username}>
+      {/* View-only strip */}
+      <div className="v-main" style={{ borderBottom: "1px solid var(--v-line)", background: "rgba(var(--v-c1-rgb),0.05)" }}>
+        <div className="v-wrap px-banner">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><IEye style={{ width: 13, height: 13, color: "var(--v-signal)" }} /> Viewing <b>@{displayName}</b> · read-only</span>
+          <span className="hide-sm" style={{ color: "var(--v-faint)" }}>Public portfolio</span>
         </div>
-        <Link href="/community" className="flex items-center gap-1 transition-colors hover:text-violet-700" style={{ color: "#7c3aed", textDecoration: "none" }}>
-          <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
-          </svg>
-          Community
-        </Link>
       </div>
 
-      <ProfileHeader
-        profile={profile}
-        projects={projects}
-        onBioChange={() => {}}
-        onCoverChange={() => {}}
-        onCoverPositionChange={() => {}}
-        onAvatarChange={() => {}}
-        onLinksChange={() => {}}
-        onSkillsChange={() => {}}
-        displayName={profile.username ?? username}
-        readOnly
-      />
-
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-16">
-        {/* Search + sort */}
-        {projects.length > 0 && (
-          <div className="mb-6">
-            <SearchBar
-              query={query}
-              onQueryChange={setQuery}
-              statusFilter={statusFilter}
-              onStatusChange={setStatusFilter}
-              sort={sort}
-              onSortChange={setSort}
-            />
+      {/* ── Profile hero ── */}
+      <header className="px-hero v-main">
+        {profile.cover ? (
+          <div className="px-cover"><img src={profile.cover} alt="" /></div>
+        ) : (
+          <div className="v-floor" style={{ height: "70%", opacity: 0.4 }} />
+        )}
+        <div className="v-wrap px-hero-inner">
+          <div className="px-avatar v-rise">
+            {profile.avatar ? <img src={profile.avatar} alt={`${displayName} avatar`} /> : <div><span className="v-grad-text">{monogram(displayName)}</span></div>}
+          </div>
+          <div className="v-rise" style={{ animationDelay: "120ms", minWidth: 0 }}>
+            <span className="v-eyebrow">Portfolio · Vol. {year}</span>
+            <h1 className="px-name">@{displayName}</h1>
+            {profile.bio && <p className="px-bio">{profile.bio}</p>}
+            {links.length > 0 && (
+              <div className="px-links">
+                {links.map((l) => (
+                  <a key={l.label} href={l.href} target="_blank" rel="noopener noreferrer" className="v-btn v-btn-sm">{l.icon} {l.label}</a>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="px-stats v-hud v-rise" style={{ animationDelay: "220ms" }}>
+            {([[projects.length, "Projects"], [techCount, "Technologies"], [statusCounts.Live, "Live now"]] as const).map(([n, label]) => (
+              <div key={label} className="v-stat">
+                <div className="v-stat-num">{pad(n)}</div>
+                <div className="v-mono v-stat-label">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {profile.skills.length > 0 && (
+          <div className="v-wrap" style={{ position: "relative", zIndex: 1, paddingBottom: 28 }}>
+            <div className="v-tags" style={{ marginBottom: 0 }}>
+              <span className="v-mono v-tags-label" style={{ color: "var(--v-faint)" }}>Skills</span>
+              {profile.skills.map((s) => <span key={s} className="v-tag is-static">{s}</span>)}
+            </div>
           </div>
         )}
+      </header>
 
-        {/* Tag cloud */}
+      <main className="v-main v-wrap">
+        <div className="v-section-head" style={{ marginTop: 48 }}>
+          <div>
+            <span className="v-eyebrow">Shipped</span>
+            <h2 className="v-section-title">The work{projects.length > 0 && <sup>{pad(filtered.length)}/{pad(projects.length)}</sup>}</h2>
+          </div>
+        </div>
+
+        {projects.length > 0 && (
+          <SearchBar query={query} onQueryChange={setQuery} statusFilter={statusFilter} onStatusChange={setStatusFilter} sort={sort} onSortChange={setSort} counts={statusCounts} />
+        )}
         {projects.length > 0 && (
           <TagCloud projects={projects} activeTag={tagFilter} onTagClick={(t) => setTagFilter(t === tagFilter ? "" : t)} />
         )}
 
-        {/* Projects — rendered in owner's preferred view mode */}
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <svg className="h-12 w-12 mb-4" style={{ color: "#c4bfe0" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v8.25m19.5 0A2.25 2.25 0 0 1 19.5 18H4.5a2.25 2.25 0 0 1-2.25-2.25V6.75"/>
-            </svg>
-            <p className="text-sm font-medium" style={{ color: "#9693b8" }}>{query || tagFilter ? "No projects match your search" : "No projects yet"}</p>
+          <div style={{ padding: "80px 0", textAlign: "center" }}>
+            <p className="v-display" style={{ fontSize: 28 }}>{query || tagFilter || statusFilter ? <>Nothing matches <span className="v-grad-text">that</span>.</> : <>No projects <span className="v-grad-text">yet</span>.</>}</p>
+            <p style={{ color: "var(--v-muted)", marginTop: 12 }}>{query || tagFilter || statusFilter ? "Try a different word, tag or status." : "Check back soon — this locker is still being filled."}</p>
           </div>
         ) : viewMode === "timeline" ? (
-          <TimelineView
-            projects={filtered}
-            onCardClick={setDetailProject}
-            onEdit={() => {}}
-          />
+          <TimelineView projects={filtered} onCardClick={setDetailProject} onEdit={() => {}} />
         ) : viewMode === "list" ? (
-          <div className="flex flex-col gap-3">
-            {filtered.map((project) => (
-              <div
-                key={project.id}
-                onClick={() => setDetailProject(project)}
-                className="flex items-center gap-4 rounded-xl px-4 py-3 cursor-pointer transition-all"
-                style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(124,58,237,0.1)", backdropFilter: "blur(8px)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.9)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.7)"; }}
-              >
-                {project.thumbnail && (
-                  <img src={project.thumbnail} alt="" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: "#0d0b1e" }}>{project.name}</p>
-                  {project.description && <p className="text-xs truncate" style={{ color: "#9693b8" }}>{project.description}</p>}
-                </div>
-                <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0" style={{ background: project.status === "Live" ? "rgba(5,150,105,0.1)" : "rgba(124,58,237,0.08)", color: project.status === "Live" ? "#059669" : "#7c3aed" }}>{project.status}</span>
+          <div className="v-list" role="list">
+            {filtered.map((project, i) => (
+              <div key={project.id} role="listitem" tabIndex={0} className="v-row" style={{ animationDelay: `${Math.min(i, 12) * 35}ms`, gridTemplateColumns: undefined }}
+                onClick={() => setDetailProject(project)} onKeyDown={(e) => { if (e.key === "Enter") setDetailProject(project); }}>
+                <span className="v-card-no hide-sm">№{pad(entryNo.get(project.id) ?? i + 1, 3)}</span>
+                <div className="v-row-thumb"><Cover name={project.name} src={project.thumbnail} showCode={false} /></div>
+                <div className="v-row-name">{project.name}</div>
+                <div className="v-row-stack hide-sm">{project.techStack.join("  /  ") || "—"}</div>
+                <div><StatusBadge status={project.status} /></div>
+                <div className="v-row-date hide-sm">{formatDate(project.deploymentDate)}</div>
+                <div className="hide-sm" />
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="v-grid">
             {filtered.map((project, i) => (
               <ProjectCard
                 key={project.id}
                 project={project}
                 index={i}
+                number={entryNo.get(project.id)}
                 onEdit={() => {}}
                 onDelete={() => {}}
                 onCardClick={setDetailProject}
@@ -240,13 +285,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             ))}
           </div>
         )}
+      </main>
 
-        {/* Activity heatmap — owner only, not shown on public view */}
-      </div>
+      <footer className="v-footer">
+        <div className="v-wrap"><div className="v-footer-mark" aria-hidden>LOCKER</div></div>
+        <div className="v-wrap v-footer-inner">
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>@{displayName} · Built with Locker</span>
+          <Link href="/landing" className="v-mono" style={{ color: "var(--v-signal)", textDecoration: "none" }}>Make your own locker →</Link>
+        </div>
+      </footer>
 
-      {/* Detail modal (read-only — onEdit no-op, onNotesChange no-op) */}
       <ProjectDetailModal
         project={detailProject}
+        number={detailProject ? entryNo.get(detailProject.id) : undefined}
         onClose={() => setDetailProject(null)}
         onEdit={() => {}}
         onNotesChange={() => {}}
@@ -258,6 +309,6 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
           fetch(`/api/public/projects/${projectId}/view`, { method: "POST", credentials: "include" }).catch(() => {});
         }}
       />
-    </div>
+    </PageShell>
   );
 }

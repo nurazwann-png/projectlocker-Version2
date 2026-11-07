@@ -60,10 +60,32 @@ export function useProjects() {
       deploymentDate: data.deploymentDate ?? "",
       coverImage: data.thumbnail ?? null,
     };
-    const row = await apiFetch("/api/projects", { method: "POST", body: JSON.stringify(payload) });
-    const project = normalise(row as Record<string, unknown>);
-    setProjects((prev) => [project, ...prev]);
-    return project;
+    try {
+      const row = await apiFetch("/api/projects", { method: "POST", body: JSON.stringify(payload) });
+      const project = normalise(row as Record<string, unknown>);
+      setProjects((prev) => [project, ...prev]);
+      return project;
+    } catch {
+      // Local-only fallback when API is unreachable (e.g. unauthenticated)
+      const project: Project = {
+        id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: data.name,
+        description: data.description,
+        status: data.status,
+        liveUrl: data.liveUrl ?? "",
+        repoUrl: data.repoUrl ?? "",
+        techStack: data.techStack,
+        notes: data.notes ?? "",
+        notesLocked: false,
+        pinned: data.pinned ?? false,
+        deploymentDate: data.deploymentDate ?? "",
+        thumbnail: data.thumbnail ?? null,
+        features: data.features ?? [],
+        createdAt: new Date().toISOString(),
+      };
+      setProjects((prev) => [project, ...prev]);
+      return project;
+    }
   }, []);
 
   const updateProject = useCallback(async (id: string, data: ProjectFormData): Promise<void> => {
@@ -78,14 +100,18 @@ export function useProjects() {
       deploymentDate: data.deploymentDate ?? "",
       coverImage: data.thumbnail ?? null,
     };
-    const row = await apiFetch(`/api/projects/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    const updated = normalise(row as Record<string, unknown>);
-    setProjects((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    try {
+      const row = await apiFetch(`/api/projects/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      const updated = normalise(row as Record<string, unknown>);
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...updated, features: data.features ?? p.features } : p)));
+    } catch {
+      setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p)));
+    }
   }, []);
 
   const deleteProject = useCallback(async (id: string): Promise<void> => {
-    await apiFetch(`/api/projects/${id}`, { method: "DELETE" });
     setProjects((prev) => prev.filter((p) => p.id !== id));
+    apiFetch(`/api/projects/${id}`, { method: "DELETE" }).catch(() => {});
   }, []);
 
   const togglePin = useCallback(async (id: string): Promise<void> => {
@@ -125,7 +151,8 @@ export function useProjects() {
         }).then((row) => normalise(row as Record<string, unknown>))
       )
     );
-    const created = results.filter((r): r is PromiseFulfilledResult<Project> => r.status === "fulfilled").map((r) => r.value);
+    // Fall back to the incoming record when the API is unreachable
+    const created = results.map((r, i) => (r.status === "fulfilled" ? r.value : { ...incoming[i], features: incoming[i].features ?? [] }));
     setProjects((prev) => {
       const map = new Map(prev.map((p) => [p.id, p]));
       for (const p of created) map.set(p.id, p);

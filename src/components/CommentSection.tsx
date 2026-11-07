@@ -39,7 +39,7 @@ function relativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-const AVATAR_COLORS = ["#7c3aed","#db2777","#0ea5e9","#059669","#d97706","#dc2626","#0284c7","#7e22ce"];
+const AVATAR_COLORS = ["#3a3f2a","#4a3a24","#26394a","#4a2e2a","#352e4a","#24443a","#3d3a33","#2f3640"];
 function avatarColor(name: string): string {
   return AVATAR_COLORS[hashStr(name) % AVATAR_COLORS.length];
 }
@@ -105,7 +105,7 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       {isLoaded && clerkName ? (
-        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: "rgba(124,58,237,0.04)", border: "1px solid rgba(124,58,237,0.15)" }}>
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)" }}>
           {user?.imageUrl ? (
             <img src={user.imageUrl} alt="" className="h-5 w-5 rounded-full object-cover flex-shrink-0" />
           ) : (
@@ -113,8 +113,8 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
               {clerkName.charAt(0).toUpperCase()}
             </div>
           )}
-          <span className="text-xs font-semibold truncate" style={{ color: "#0d0b1e" }}>{clerkName}</span>
-          <span className="text-[10px] ml-auto" style={{ color: "#9693b8" }}>signed in</span>
+          <span className="text-xs font-semibold truncate" style={{ color: "var(--v-text)" }}>{clerkName}</span>
+          <span className="text-[10px] ml-auto" style={{ color: "var(--v-faint)" }}>signed in</span>
         </div>
       ) : (
         <input
@@ -124,9 +124,9 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
           maxLength={60}
           required
           className="w-full rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
-          style={{ background: "rgba(124,58,237,0.04)", border: "1px solid rgba(124,58,237,0.2)", color: "#0d0b1e" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.2)"; }}
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", color: "var(--v-text)" }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(212,255,63,0.55)"; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
         />
       )}
       <textarea
@@ -137,21 +137,21 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
         required
         rows={2}
         className="w-full resize-none rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
-        style={{ background: "rgba(124,58,237,0.04)", border: "1px solid rgba(124,58,237,0.2)", color: "#0d0b1e", lineHeight: 1.6 }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.4)"; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(124,58,237,0.2)"; }}
+        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", color: "var(--v-text)", lineHeight: 1.6 }}
+        onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(212,255,63,0.55)"; }}
+        onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)"; }}
         autoFocus
       />
-      {error && <p className="text-[10px]" style={{ color: "#dc2626" }}>{error}</p>}
+      {error && <p className="text-[10px]" style={{ color: "var(--v-coral)" }}>{error}</p>}
       <div className="flex items-center justify-between">
-        <span className="text-[10px]" style={{ color: "#c4bfe0" }}>{body.length}/500</span>
+        <span className="text-[10px]" style={{ color: "var(--v-faint)" }}>{body.length}/500</span>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onCancel} className="text-xs transition-colors" style={{ color: "#9693b8" }}>Cancel</button>
+          <button type="button" onClick={onCancel} className="text-xs transition-colors" style={{ color: "var(--v-faint)" }}>Cancel</button>
           <button
             type="submit"
             disabled={submitting || !authorName.trim() || !body.trim()}
             className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
-            style={{ background: "rgba(124,58,237,0.1)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.25)", opacity: (submitting || !authorName.trim() || !body.trim()) ? 0.5 : 1 }}
+            style={{ background: "rgba(212,255,63,0.12)", color: "var(--v-signal)", border: "1px solid rgba(255,255,255,0.12)", opacity: (submitting || !authorName.trim() || !body.trim()) ? 0.5 : 1 }}
           >
             {submitting ? "Posting…" : parentId ? "Reply" : "Post"}
           </button>
@@ -238,8 +238,8 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-xs font-semibold" style={{ color: "#0d0b1e", fontSize: isReply ? 11 : 12 }}>{comment.authorName}</span>
-            <span style={{ color: "#c4bfe0", fontSize: 10 }}>{relativeTime(comment.createdAt)}</span>
+            <span className="text-xs font-semibold" style={{ color: "var(--v-text)", fontSize: isReply ? 11 : 12 }}>{comment.authorName}</span>
+            <span style={{ color: "var(--v-faint)", fontSize: 10 }}>{relativeTime(comment.createdAt)}</span>
             {comment.acknowledged && (
               <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10b981" }}>
                 ✓ Noted
@@ -256,24 +256,24 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
                 rows={2}
                 autoFocus
                 className="w-full resize-none rounded-lg px-3 py-1.5 text-xs outline-none"
-                style={{ background: "rgba(124,58,237,0.04)", border: "1px solid rgba(124,58,237,0.35)", color: "#0d0b1e", lineHeight: 1.6 }}
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)", color: "var(--v-text)", lineHeight: 1.6 }}
               />
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleEditSave}
                   disabled={saving || !editBody.trim()}
                   className="rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all"
-                  style={{ background: "rgba(124,58,237,0.1)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.25)", opacity: saving ? 0.6 : 1 }}
+                  style={{ background: "rgba(212,255,63,0.12)", color: "var(--v-signal)", border: "1px solid rgba(255,255,255,0.12)", opacity: saving ? 0.6 : 1 }}
                 >
                   {saving ? "Saving…" : "Save"}
                 </button>
-                <button onClick={() => { setEditMode(false); setEditBody(comment.body); }} className="text-[11px]" style={{ color: "#9693b8" }}>
+                <button onClick={() => { setEditMode(false); setEditBody(comment.body); }} className="text-[11px]" style={{ color: "var(--v-faint)" }}>
                   Cancel
                 </button>
               </div>
             </div>
           ) : (
-            <p className="leading-relaxed mt-0.5 break-words" style={{ color: "#5b5880", fontSize: isReply ? 11 : 12 }}>{comment.body}</p>
+            <p className="leading-relaxed mt-0.5 break-words" style={{ color: "var(--v-muted)", fontSize: isReply ? 11 : 12 }}>{comment.body}</p>
           )}
 
           <div className="flex items-center gap-3 mt-1 flex-wrap">
@@ -281,9 +281,9 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
               <button
                 onClick={() => setShowReplyForm((v) => !v)}
                 className="text-[11px] font-medium transition-colors"
-                style={{ color: showReplyForm ? "#7c3aed" : "#9693b8" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = showReplyForm ? "#7c3aed" : "#9693b8"; }}
+                style={{ color: showReplyForm ? "var(--v-signal)" : "var(--v-faint)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-signal)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = showReplyForm ? "var(--v-signal)" : "var(--v-faint)"; }}
               >
                 {showReplyForm ? "Cancel" : "↩ Reply"}
               </button>
@@ -295,9 +295,9 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
                 disabled={acking}
                 className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 transition-all"
                 style={{
-                  background: comment.acknowledged ? "rgba(16,185,129,0.1)" : "rgba(124,58,237,0.06)",
-                  color: comment.acknowledged ? "#10b981" : "#9693b8",
-                  border: `1px solid ${comment.acknowledged ? "rgba(16,185,129,0.2)" : "rgba(124,58,237,0.15)"}`,
+                  background: comment.acknowledged ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.05)",
+                  color: comment.acknowledged ? "#10b981" : "var(--v-faint)",
+                  border: `1px solid ${comment.acknowledged ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.12)"}`,
                   opacity: acking ? 0.6 : 1,
                 }}
                 title={comment.acknowledged ? "Mark as unacknowledged" : "Mark as noted / taken into consideration"}
@@ -310,9 +310,9 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
               <button
                 onClick={() => setEditMode(true)}
                 className="text-[11px] transition-colors"
-                style={{ color: "#9693b8" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}
+                style={{ color: "var(--v-faint)" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-signal)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-faint)"; }}
                 title="Edit comment"
               >
                 Edit
@@ -324,9 +324,9 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
                 onClick={handleDelete}
                 disabled={deleting}
                 className="text-[11px] transition-colors"
-                style={{ color: "#9693b8", opacity: deleting ? 0.5 : 1 }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}
+                style={{ color: "var(--v-faint)", opacity: deleting ? 0.5 : 1 }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-coral)"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-faint)"; }}
                 title="Delete comment"
               >
                 {deleting ? "Deleting…" : "Delete"}
@@ -355,7 +355,7 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
       {replies.length > 0 && (
         <div className="ml-8 mt-2 space-y-2.5">
           {!repliesExpanded && (
-            <button onClick={() => setRepliesExpanded(true)} className="text-[11px] font-medium" style={{ color: "#7c3aed" }}>
+            <button onClick={() => setRepliesExpanded(true)} className="text-[11px] font-medium" style={{ color: "var(--v-signal)" }}>
               ▾ {replies.length} {replies.length === 1 ? "reply" : "replies"}
             </button>
           )}
@@ -375,7 +375,7 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
                   currentUserId={currentUserId}
                 />
               ))}
-              <button onClick={() => setRepliesExpanded(false)} className="text-[11px]" style={{ color: "#9693b8" }}>▴ Hide replies</button>
+              <button onClick={() => setRepliesExpanded(false)} className="text-[11px]" style={{ color: "var(--v-faint)" }}>▴ Hide replies</button>
             </>
           )}
         </div>
@@ -467,15 +467,15 @@ export default function CommentSection({ projectId, isOwner = false, onCommentPo
   }
 
   return (
-    <div onClick={(e) => e.stopPropagation()} style={{ borderTop: "1px solid rgba(124,58,237,0.08)" }}>
+    <div onClick={(e) => e.stopPropagation()} style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-3 pb-2">
         <button
           onClick={() => setExpanded((v) => !v)}
           className="flex items-center gap-1.5 text-xs transition-colors"
-          style={{ color: "#9693b8" }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}
+          style={{ color: "var(--v-faint)" }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-signal)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-faint)"; }}
         >
           <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 2c-2.236 0-4.43.18-6.57.524C1.993 2.755 1 4.014 1 5.426v5.148c0 1.413.993 2.67 2.43 2.902.848.137 1.705.248 2.57.331v3.443a.75.75 0 0 0 1.28.53l3.58-3.579a.78.78 0 0 1 .527-.224 41.202 41.202 0 0 0 5.183-.5c1.437-.232 2.43-1.49 2.43-2.903V5.426c0-1.413-.993-2.67-2.43-2.902A41.289 41.289 0 0 0 10 2Zm0 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM8 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm5 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
@@ -486,9 +486,9 @@ export default function CommentSection({ projectId, isOwner = false, onCommentPo
           <button
             onClick={() => setShowForm((v) => !v)}
             className="text-xs font-medium transition-colors"
-            style={{ color: showForm ? "#7c3aed" : "#9693b8" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = showForm ? "#7c3aed" : "#9693b8"; }}
+            style={{ color: showForm ? "var(--v-signal)" : "var(--v-faint)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "var(--v-signal)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = showForm ? "var(--v-signal)" : "var(--v-faint)"; }}
           >
             {showForm ? "Cancel" : "+ Comment"}
           </button>
@@ -497,7 +497,7 @@ export default function CommentSection({ projectId, isOwner = false, onCommentPo
 
       {/* Pending acknowledgement notice for owner */}
       {isOwner && loaded && tree.some((c) => !c.acknowledged) && (
-        <div className="mx-5 mb-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px]" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "#b45309" }}>
+        <div className="mx-5 mb-2 flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px]" style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", color: "var(--v-amber)" }}>
           <svg className="h-3.5 w-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" /></svg>
           {tree.filter((c) => !c.acknowledged).length} comment{tree.filter((c) => !c.acknowledged).length !== 1 ? "s" : ""} pending review
         </div>
@@ -520,12 +520,12 @@ export default function CommentSection({ projectId, isOwner = false, onCommentPo
             />
           ))}
           {!expanded && hidden > 0 && (
-            <button onClick={() => setExpanded(true)} className="text-xs font-medium" style={{ color: "#7c3aed" }}>
+            <button onClick={() => setExpanded(true)} className="text-xs font-medium" style={{ color: "var(--v-signal)" }}>
               Show {hidden} more ▾
             </button>
           )}
           {expanded && tree.length > VISIBLE && (
-            <button onClick={() => setExpanded(false)} className="text-xs" style={{ color: "#9693b8" }}>
+            <button onClick={() => setExpanded(false)} className="text-xs" style={{ color: "var(--v-faint)" }}>
               Show less ▴
             </button>
           )}
@@ -534,7 +534,7 @@ export default function CommentSection({ projectId, isOwner = false, onCommentPo
 
       {/* Empty state for non-owner */}
       {loaded && tree.length === 0 && !isOwner && (
-        <p className="px-5 pb-3 text-xs" style={{ color: "#c4bfe0" }}>No comments yet. Be the first!</p>
+        <p className="px-5 pb-3 text-xs" style={{ color: "var(--v-faint)" }}>No comments yet. Be the first!</p>
       )}
 
       {showForm && (

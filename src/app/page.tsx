@@ -2,8 +2,6 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { UserButton, useUser, useAuth } from "@clerk/nextjs";
-import LandingPage from "@/components/LandingPage";
 import type { Project, ProjectFormData, ProjectStatus } from "@/types/project";
 import { useProjects } from "@/hooks/useProjects";
 import { useProfile } from "@/hooks/useProfile";
@@ -11,24 +9,30 @@ import ProjectCard from "@/components/ProjectCard";
 import ProjectModal from "@/components/ProjectModal";
 import ProjectDetailModal from "@/components/ProjectDetailModal";
 import SearchBar, { type SortOption } from "@/components/SearchBar";
-import ProfileHeader from "@/components/ProfileHeader";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import TagCloud from "@/components/TagCloud";
 import TimelineView from "@/components/TimelineView";
-import CopyrightFooter from "@/components/CopyrightFooter";
+import StatusBadge from "@/components/StatusBadge";
+import Cover from "@/components/Cover";
+import ThemePicker from "@/components/ThemePicker";
+import { formatDate, pad } from "@/lib/projectMeta";
+import {
+  IArrowLeft, IArrowUpRight, ICheck, IDownload, IEdit, IGrid, IList, IPin, IPlus,
+  ISelect, ITimeline, ITrash, IUpload, IX, LockerMark,
+} from "@/components/icons";
+
+type ViewMode = "grid" | "list" | "timeline";
 
 export default function DashboardPage() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();
   const { projects, hydrated, addProject, updateProject, updateNotes, updateNotesLock, togglePin, deleteProject, importProjects } = useProjects();
-  const { profile, hydrated: profileHydrated, setBio, setCover, setCoverPosition, setAvatar, setLinks, setSkills, setUsername, setNotesPin, setPreferredView } = useProfile();
+  const { profile, hydrated: profileHydrated, setNotesPin, setPreferredView } = useProfile();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | "">("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [viewMode, setViewModeState] = useState<"grid" | "list" | "timeline">("grid");
+  const [viewMode, setViewModeState] = useState<ViewMode>("grid");
   const [tagFilter, setTagFilter] = useState<string>("");
   const [detailProject, setDetailProject] = useState<Project | null>(null);
   const [sort, setSort] = useState<SortOption>("newest");
@@ -38,23 +42,19 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [milestoneToast, setMilestoneToast] = useState<string | null>(null);
   const prevCountRef = useRef(0);
-
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync viewMode from profile once loaded
   useEffect(() => {
-    if (profileHydrated && profile.preferredView) {
-      setViewModeState(profile.preferredView);
-    }
+    if (profileHydrated && profile.preferredView) setViewModeState(profile.preferredView);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileHydrated]);
 
-  function setViewMode(mode: "grid" | "list" | "timeline") {
+  function setViewMode(mode: ViewMode) {
     setViewModeState(mode);
     setPreferredView(mode);
   }
 
-  // Milestone toast on project count change
   useEffect(() => {
     if (!hydrated) return;
     const prev = prevCountRef.current;
@@ -62,11 +62,11 @@ export default function DashboardPage() {
     prevCountRef.current = curr;
     if (prev === 0 || curr <= prev) return;
     const MILESTONES: Record<number, string> = {
-      1: "🚀 First project added!",
-      5: "🔥 5 projects — you're on a roll!",
-      10: "💎 10 projects — impressive portfolio!",
-      25: "🌟 25 projects — legendary!",
-      50: "🏆 50 projects — absolute legend!",
+      1: "First entry locked in.",
+      5: "Five projects. You're on a roll.",
+      10: "Ten projects. That's a body of work.",
+      25: "Twenty-five projects. Legendary.",
+      50: "Fifty projects. Absolute legend.",
     };
     if (MILESTONES[curr]) {
       setMilestoneToast(MILESTONES[curr]);
@@ -75,13 +75,12 @@ export default function DashboardPage() {
     }
   }, [projects.length, hydrated]);
 
-  // Global keyboard shortcuts
   useEffect(() => {
     function handler(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName;
-      const inInput = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement).isContentEditable;
       if (e.key === "/" && !inInput) { e.preventDefault(); searchInputRef.current?.focus(); return; }
-      if (inInput) return;
+      if (inInput || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "n" || e.key === "N") { openAddModal(); return; }
       if (e.key === "g" || e.key === "G") { setViewMode("grid"); return; }
       if (e.key === "l" || e.key === "L") { setViewMode("list"); return; }
@@ -90,13 +89,13 @@ export default function DashboardPage() {
     }
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const dismissUndo = useCallback(() => {
     setUndoToast((prev) => { if (prev) clearTimeout(prev.timeoutId); return null; });
   }, []);
 
-  // Clean up undo timeout on unmount
   useEffect(() => () => { if (undoToast) clearTimeout(undoToast.timeoutId); }, [undoToast]);
 
   const displayKey = `${query}|${statusFilter}|${tagFilter}|${sort}|${viewMode}`;
@@ -114,17 +113,33 @@ export default function DashboardPage() {
           p.techStack.some((t) => t.toLowerCase().includes(q))
       );
     }
-    list = [...list].sort((a, b) => {
-      // Pinned always first
+    return [...list].sort((a, b) => {
       if (a.pinned && !b.pinned) return -1;
       if (!a.pinned && b.pinned) return 1;
       if (sort === "oldest") return a.createdAt.localeCompare(b.createdAt);
       if (sort === "az") return a.name.localeCompare(b.name);
       if (sort === "status") return a.status.localeCompare(b.status);
-      return b.createdAt.localeCompare(a.createdAt); // newest
+      return b.createdAt.localeCompare(a.createdAt);
     });
-    return list;
   }, [projects, query, statusFilter, tagFilter, sort]);
+
+  // Stable entry numbers: order of creation
+  const entryNo = useMemo(() => {
+    const m = new Map<string, number>();
+    [...projects].sort((a, b) => a.createdAt.localeCompare(b.createdAt)).forEach((p, i) => m.set(p.id, i + 1));
+    return m;
+  }, [projects]);
+
+  const statusCounts = useMemo(() => {
+    const c: Record<string, number> = { "": projects.length, Live: 0, Maintenance: 0, Deprecated: 0 };
+    for (const p of projects) c[p.status] = (c[p.status] ?? 0) + 1;
+    return c;
+  }, [projects]);
+
+  const uniqueTechCount = useMemo(() => new Set(projects.flatMap((p) => p.techStack)).size, [projects]);
+  const liveCount = statusCounts.Live;
+  const latest = useMemo(() => [...projects].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0], [projects]);
+  const year = new Date().getFullYear();
 
   function toggleSelected(id: string) {
     setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -138,6 +153,7 @@ export default function DashboardPage() {
   function openAddModal() { setEditingProject(null); setModalOpen(true); }
   function openEditModal(project: Project) { setEditingProject(project); setModalOpen(true); }
   function duplicateProject(project: Project) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _id, createdAt: _c, name, ...rest } = project;
     addProject({ ...rest, name: `${name} (copy)` });
   }
@@ -155,7 +171,6 @@ export default function DashboardPage() {
     if (!project) { setDeleteConfirmId(null); return; }
     deleteProject(deleteConfirmId);
     setDeleteConfirmId(null);
-    // Cancel any previous undo toast
     if (undoToast) clearTimeout(undoToast.timeoutId);
     const timeoutId = setTimeout(() => setUndoToast(null), 5000);
     setUndoToast({ project, timeoutId });
@@ -173,8 +188,6 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   }
 
-  const importInputRef = useRef<HTMLInputElement>(null);
-
   function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -190,436 +203,224 @@ export default function DashboardPage() {
     e.target.value = "";
   }
 
-  if (isLoaded && !isSignedIn) return <LandingPage />;
+  function clearFilters() { setQuery(""); setStatusFilter(""); setTagFilter(""); }
+
+  const hasProjects = hydrated && projects.length > 0;
 
   return (
-    <div className="min-h-screen" style={{
-      backgroundImage: "url('/bg.jpg')",
-      backgroundSize: "cover",
-      backgroundPosition: "center top",
-      backgroundAttachment: "fixed",
-      backgroundColor: "#eeeaff",
-    }}>
+    <div className="vault">
+      <div className="v-atmos" />
+      <div className="v-noise" />
 
-      {/* Top-right nav */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
-        <Link
-          href="/community"
-          className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold transition-all"
-          style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)", textDecoration: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}
-        >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
-          </svg>
-          Community
-        </Link>
-        <div style={{ filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.4))" }}>
-          <UserButton />
-        </div>
-      </div>
-
-      {/* Profile Header */}
-      {profileHydrated && (
-        <ProfileHeader
-          profile={profile}
-          projects={projects}
-          onBioChange={setBio}
-          onCoverChange={setCover}
-          onCoverPositionChange={setCoverPosition}
-          onAvatarChange={setAvatar}
-          onLinksChange={setLinks}
-          onSkillsChange={setSkills}
-          onUsernameChange={setUsername}
-          displayName={user?.fullName ?? user?.username ?? undefined}
-        />
-      )}
-
-      {/* Activity heatmap */}
-      {hydrated && projects.length > 0 && (
-        <div className="mb-6">
-          <ActivityHeatmap projects={projects} />
-        </div>
-      )}
-
-      {/* Main content */}
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-16">
-
-        {/* Section header */}
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl px-4 py-3"
-          style={{ background: "rgba(255,255,255,0.07)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.1)" }}>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold" style={{ color: "#ffffff", fontFamily: "'Syne', system-ui, sans-serif", textShadow: "0 1px 6px rgba(0,0,0,0.4)" }}>Projects</h2>
-            {hydrated && projects.length > 0 && (
-              <span
-                className="rounded-full px-2.5 py-0.5 text-sm font-semibold"
-                style={{ background: "rgba(167,139,250,0.25)", color: "#c4b5fd", border: "1px solid rgba(167,139,250,0.4)" }}
-              >
-                {projects.length}
-              </span>
-            )}
+      {/* ── Nav ── */}
+      <nav className="v-nav">
+        <div className="v-wrap v-nav-inner">
+          <Link href="/" className="v-brand" aria-label="Locker home">
+            <LockerMark className="v-brand-mark" />
+            <span className="v-brand-name">Locker</span>
+            <span className="v-brand-path">/ nurazwann</span>
+          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="v-nav-hints">
+              <kbd className="v-kbd">/</kbd> search <span style={{ opacity: 0.4 }}>·</span>
+              <kbd className="v-kbd">N</kbd> new <span style={{ opacity: 0.4 }}>·</span>
+              <button onClick={() => setShowShortcuts(true)} className="v-kbd" style={{ cursor: "pointer" }} aria-label="Keyboard shortcuts">?</button>
+            </span>
+            <ThemePicker />
+            <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Home</span></Link>
+            <button onClick={openAddModal} className="v-btn v-btn-sm v-btn-primary"><IPlus /> New project</button>
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
-            {/* Bulk select */}
-            {hydrated && projects.length > 0 && (
-              <button
-                onClick={() => { setBulkMode((v) => !v); setSelected(new Set()); }}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors"
-                style={bulkMode
-                  ? { background: "rgba(167,139,250,0.3)", color: "#e0d9ff", border: "1px solid rgba(167,139,250,0.5)" }
-                  : { background: "rgba(255,255,255,0.08)", color: "rgba(200,190,255,0.8)", border: "1px solid rgba(255,255,255,0.15)" }}
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
-                </svg>
-                {bulkMode ? "Cancel" : "Select"}
-              </button>
-            )}
+        </div>
+      </nav>
 
-            {/* Export / Import */}
-            {hydrated && projects.length > 0 && (
-              <button
-                onClick={exportJSON}
-                title="Export projects as JSON"
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors flex-shrink-0"
-                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(200,190,255,0.8)", border: "1px solid rgba(255,255,255,0.15)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#ffffff"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.3)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(200,190,255,0.8)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.15)"; }}
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 3a.75.75 0 0 1 .75.75v7.19l2.22-2.22a.75.75 0 1 1 1.06 1.06l-3.5 3.5a.75.75 0 0 1-1.06 0l-3.5-3.5a.75.75 0 1 1 1.06-1.06l2.22 2.22V3.75A.75.75 0 0 1 10 3ZM3.5 14.75a.75.75 0 0 0 0 1.5h13a.75.75 0 0 0 0-1.5h-13Z" clipRule="evenodd" />
-                </svg>
-                Export
+      <main className="v-main v-wrap">
+        {/* ── Hero ── */}
+        <header className="v-hero">
+          <div className="v-hero-top v-rise">
+            <span className="v-eyebrow">Project Locker · Vol. {year}</span>
+            <span className="v-mono v-hero-status">
+              <span className={`v-led ${liveCount > 0 ? "is-live" : ""}`} style={liveCount > 0 ? undefined : { background: "var(--v-faint)" }} />
+              {hydrated ? `${liveCount} live · ${projects.length} in locker` : "Opening locker…"}
+            </span>
+          </div>
+
+          <div>
+            <h1 className="v-hero-title">
+              <span className="v-line" style={{ animationDelay: "80ms" }}>Shipped work,</span>
+              <span className="v-line" style={{ animationDelay: "200ms" }}><em>kept</em> under lock.</span>
+            </h1>
+            <p className="v-hero-sub v-rise" style={{ animationDelay: "320ms" }}>
+              The working index of <b>Nurazwann bin Ismail</b> — every app designed, built and deployed,
+              with the stack, the story and the live link one click away.
+            </p>
+          </div>
+
+          <aside className="v-rise" style={{ animationDelay: "420ms" }}>
+            <div className="v-stats v-hud">
+              {([[projects.length, "Projects"], [uniqueTechCount, "Technologies"], [liveCount, "Live now"]] as const).map(([n, label]) => (
+                <div key={label} className="v-stat">
+                  <div className="v-stat-num">{hydrated ? pad(n) : "––"}</div>
+                  <div className="v-mono v-stat-label">{label}</div>
+                </div>
+              ))}
+            </div>
+            {latest && (
+              <button className="v-latest" onClick={() => setDetailProject(latest)}>
+                <span className="v-mono" style={{ fontSize: 10 }}>Latest</span>
+                <span className="v-latest-name">{latest.name}</span>
+                <IArrowUpRight />
               </button>
             )}
+          </aside>
+        </header>
+
+        {hasProjects && <ActivityHeatmap projects={projects} />}
+
+        {/* ── Index ── */}
+        <div className="v-section-head">
+          <div>
+            <span className="v-eyebrow">The index</span>
+            <h2 className="v-section-title">
+              All projects
+              {hasProjects && <sup>{pad(displayed.length)}/{pad(projects.length)}</sup>}
+            </h2>
+          </div>
+          <div className="v-actions">
+            {hasProjects && (
+              <button onClick={() => { setBulkMode((v) => !v); setSelected(new Set()); }} className="v-btn v-btn-sm" aria-pressed={bulkMode}>
+                <ISelect /> {bulkMode ? "Done" : "Select"}
+              </button>
+            )}
+            {hasProjects && <button onClick={exportJSON} className="v-btn v-btn-sm" title="Export JSON backup"><IDownload /> Export</button>}
             <input ref={importInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
-            <button
-              onClick={() => importInputRef.current?.click()}
-              title="Import projects from JSON"
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-colors"
-              style={{ background: "rgba(124,58,237,0.05)", color: "#5b5880", border: "1px solid rgba(124,58,237,0.15)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(124,58,237,0.3)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#5b5880"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(124,58,237,0.15)"; }}
-            >
-              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 17a.75.75 0 0 1-.75-.75V9.06l-2.22 2.22a.75.75 0 1 1-1.06-1.06l3.5-3.5a.75.75 0 0 1 1.06 0l3.5 3.5a.75.75 0 1 1-1.06 1.06L10.75 9.06v7.19A.75.75 0 0 1 10 17ZM3.5 5.25a.75.75 0 0 0 0-1.5h13a.75.75 0 0 0 0 1.5h-13Z" clipRule="evenodd" />
-              </svg>
-              Import
-            </button>
-            {/* View toggle */}
-            <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.06)" }}>
-              {(["grid","list","timeline"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode)}
-                  title={`${mode.charAt(0).toUpperCase() + mode.slice(1)} view`}
-                  className="p-2 transition-colors"
-                  style={{ background: viewMode === mode ? "rgba(167,139,250,0.3)" : "transparent", color: viewMode === mode ? "#e0d9ff" : "rgba(200,190,255,0.5)" }}
-                >
-                  {mode === "grid" && (
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5 3a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5ZM5 11a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H5ZM11 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V5ZM11 13a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2Z" /></svg>
-                  )}
-                  {mode === "list" && (
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" /></svg>
-                  )}
-                  {mode === "timeline" && (
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2 10a.75.75 0 0 1 .75-.75h12.59l-2.1-1.95a.75.75 0 1 1 1.02-1.1l3.5 3.25a.75.75 0 0 1 0 1.1l-3.5 3.25a.75.75 0 1 1-1.02-1.1l2.1-1.95H2.75A.75.75 0 0 1 2 10Z" clipRule="evenodd" /></svg>
-                  )}
+            <button onClick={() => importInputRef.current?.click()} className="v-btn v-btn-sm" title="Import JSON"><IUpload /> Import</button>
+            <div className="v-seg" role="group" aria-label="View mode">
+              {([["grid", IGrid, "Grid"], ["list", IList, "List"], ["timeline", ITimeline, "Timeline"]] as const).map(([mode, Icon, label]) => (
+                <button key={mode} onClick={() => setViewMode(mode)} aria-pressed={viewMode === mode} title={`${label} view`} aria-label={`${label} view`}>
+                  <Icon />
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setShowShortcuts(true)}
-              title="Keyboard shortcuts (?)"
-              className="rounded-xl p-2 text-xs font-bold transition-colors"
-              style={{ background: "rgba(255,255,255,0.08)", color: "rgba(200,190,255,0.6)", border: "1px solid rgba(255,255,255,0.15)", lineHeight: 1 }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#ffffff"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "rgba(200,190,255,0.6)"; }}
-            >
-              ?
-            </button>
-            <button
-              onClick={openAddModal}
-              className="btn-gradient inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-              New Project
-            </button>
           </div>
         </div>
 
-        {/* Search bar */}
-        {hydrated && projects.length > 0 && (
-          <div className="mb-6">
-            <SearchBar
-              query={query}
-              onQueryChange={setQuery}
-              statusFilter={statusFilter}
-              onStatusChange={setStatusFilter}
-              sort={sort}
-              onSortChange={setSort}
-              inputRef={searchInputRef}
-            />
-          </div>
+        {hasProjects && (
+          <SearchBar
+            query={query} onQueryChange={setQuery}
+            statusFilter={statusFilter} onStatusChange={setStatusFilter}
+            sort={sort} onSortChange={setSort}
+            inputRef={searchInputRef} counts={statusCounts}
+          />
         )}
 
-        {/* Tag cloud */}
-        {hydrated && projects.length > 0 && (
-          <TagCloud projects={projects} activeTag={tagFilter} onTagClick={setTagFilter} />
-        )}
+        {hasProjects && <TagCloud projects={projects} activeTag={tagFilter} onTagClick={setTagFilter} />}
 
-        {/* Active filter chips */}
         {(tagFilter || statusFilter || query) && (
-          <div className="mb-4 flex flex-wrap gap-2 items-center">
-            <span className="text-xs font-medium" style={{ color: "rgba(200,190,255,0.7)" }}>Filters:</span>
-            {tagFilter && (
-              <button
-                onClick={() => setTagFilter("")}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-                style={{ background: "rgba(124,58,237,0.08)", color: "#6d28d9", border: "1px solid rgba(124,58,237,0.25)" }}
-              >
-                Tag: {tagFilter}
-                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-              </button>
-            )}
-            {statusFilter && (
-              <button
-                onClick={() => setStatusFilter("")}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-                style={{ background: "rgba(5,150,105,0.08)", color: "#065f46", border: "1px solid rgba(5,150,105,0.25)" }}
-              >
-                Status: {statusFilter}
-                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-              </button>
-            )}
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-                style={{ background: "rgba(14,165,233,0.08)", color: "#0369a1", border: "1px solid rgba(14,165,233,0.25)" }}
-              >
-                Search: &ldquo;{query}&rdquo;
-                <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-              </button>
-            )}
-            <button
-              onClick={() => { setQuery(""); setStatusFilter(""); setTagFilter(""); }}
-              className="text-xs transition-colors"
-              style={{ color: "#9693b8" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#5b5880"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}
-            >
-              Clear all
-            </button>
+          <div className="v-filters">
+            <span className="v-mono" style={{ color: "var(--v-faint)" }}>Filtered by</span>
+            {tagFilter && <span className="v-chip">#{tagFilter}<button onClick={() => setTagFilter("")} aria-label="Remove tag filter"><IX /></button></span>}
+            {statusFilter && <span className="v-chip">{statusFilter}<button onClick={() => setStatusFilter("")} aria-label="Remove status filter"><IX /></button></span>}
+            {query && <span className="v-chip">&ldquo;{query}&rdquo;<button onClick={() => setQuery("")} aria-label="Clear search"><IX /></button></span>}
+            <button onClick={clearFilters} className="v-btn v-btn-sm v-btn-quiet">Clear all</button>
           </div>
         )}
 
-        {/* Content area */}
+        {/* ── Content ── */}
         {!hydrated ? (
-          // Skeleton cards
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="overflow-hidden rounded-2xl" style={{ background: "#ffffff", border: "1px solid rgba(124,58,237,0.1)", boxShadow: "0 2px 8px rgba(124,58,237,0.05)" }}>
-                <div className="shimmer" style={{ height: 180 }} />
-                <div className="p-6 space-y-3">
-                  <div className="shimmer rounded-lg" style={{ height: 20, width: "60%" }} />
-                  <div className="shimmer rounded-lg" style={{ height: 14, width: "90%" }} />
-                  <div className="shimmer rounded-lg" style={{ height: 14, width: "75%" }} />
-                  <div className="flex gap-2 pt-1">
-                    <div className="shimmer rounded-full" style={{ height: 24, width: 64 }} />
-                    <div className="shimmer rounded-full" style={{ height: 24, width: 80 }} />
-                    <div className="shimmer rounded-full" style={{ height: 24, width: 56 }} />
-                  </div>
+          <div className="v-grid">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="v-card" style={{ cursor: "default", animationDelay: `${i * 80}ms` }}>
+                <div className="v-card-media v-skel" />
+                <div className="v-card-body" style={{ gap: 10 }}>
+                  <div className="v-skel" style={{ height: 12, width: "30%" }} />
+                  <div className="v-skel" style={{ height: 26, width: "70%" }} />
+                  <div className="v-skel" style={{ height: 12, width: "90%" }} />
+                  <div className="v-skel" style={{ height: 12, width: "55%" }} />
                 </div>
               </div>
             ))}
           </div>
         ) : projects.length === 0 ? (
-          // Empty state
-          <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
-            <div
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-3xl"
-              style={{ background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}
-            >
-              <svg className="h-12 w-12" style={{ color: "#7c3aed" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v8.25m19.5 0v.243a2.25 2.25 0 0 1-2.182 2.25H4.432A2.25 2.25 0 0 1 2.25 14.493V14.25" />
-              </svg>
-            </div>
-            <h3 className="mb-2 text-xl font-bold" style={{ color: "#0d0b1e", fontFamily: "'Syne', system-ui, sans-serif" }}>No projects yet</h3>
-            <p className="mb-8 max-w-sm text-sm" style={{ color: "#5b5880" }}>
-              Start building your portfolio. Add your first project to showcase everything you&apos;ve shipped.
-            </p>
-            <button
-              onClick={openAddModal}
-              className="btn-gradient inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white"
-            >
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-              </svg>
-              Add your first project
-            </button>
-          </div>
+          <EmptyLocker onAdd={openAddModal} />
         ) : displayed.length === 0 ? (
-          // No results
-          <div className="flex min-h-[30vh] flex-col items-center justify-center text-center">
-            <svg className="mb-3 h-10 w-10" style={{ color: "#c4bfe0" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 15.803 7.5 7.5 0 0 1 15.803 15.803Z" />
-            </svg>
-            <p style={{ color: "#5b5880" }} className="text-sm">No projects match your search.</p>
-            <button
-              onClick={() => { setQuery(""); setStatusFilter(""); setTagFilter(""); }}
-              className="mt-3 text-sm font-medium"
-              style={{ color: "#7c3aed" }}
-            >
-              Clear filters
-            </button>
+          <div style={{ padding: "72px 0", textAlign: "center" }}>
+            <p className="v-display" style={{ fontSize: 32, lineHeight: 1.05 }}>Nothing matches <em className="v-grad-text" style={{ fontStyle: "normal" }}>that</em>.</p>
+            <p style={{ color: "var(--v-muted)", marginTop: 12 }}>Try a different word, tag or status.</p>
+            <button onClick={clearFilters} className="v-btn" style={{ marginTop: 22 }}>Clear filters</button>
           </div>
         ) : viewMode === "timeline" ? (
-          <TimelineView
-            projects={displayed}
-            onCardClick={setDetailProject}
-            onEdit={openEditModal}
-          />
+          <TimelineView key={displayKey} projects={displayed} onCardClick={setDetailProject} onEdit={openEditModal} />
         ) : viewMode === "grid" ? (
-          // Grid view
-          <div key={displayKey} className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div key={displayKey} className="v-grid">
             {displayed.map((project, i) => (
-              <div key={project.id} className="relative">
-                {bulkMode && (
-                  <button
-                    onClick={() => toggleSelected(project.id)}
-                    className="absolute left-3 top-3 z-20 flex h-6 w-6 items-center justify-center rounded-full transition-all"
-                    style={selected.has(project.id)
-                      ? { background: "#7c3aed", boxShadow: "0 2px 10px rgba(124,58,237,0.5)" }
-                      : { background: "rgba(255,255,255,0.8)", border: "2px solid rgba(124,58,237,0.35)" }
-                    }
-                  >
-                    {selected.has(project.id) && (
-                      <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="#ffffff">
-                        <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                )}
-                <div style={bulkMode && selected.has(project.id) ? { outline: "2px solid #7c3aed", borderRadius: "1rem", outlineOffset: "2px" } : {}}>
-                  <ProjectCard
-                    project={project}
-                    onEdit={openEditModal}
-                    onDelete={(id) => setDeleteConfirmId(id)}
-                    onTagClick={setTagFilter}
-                    activeTagFilter={tagFilter}
-                    onDuplicate={duplicateProject}
-                    onCardClick={bulkMode ? (p) => toggleSelected(p.id) : setDetailProject}
-                    onPin={togglePin}
-                    onThumbnailChange={(id, url) => {
-                      const p = projects.find((x) => x.id === id);
-                      if (p) updateProject(id, { ...p, thumbnail: url, name: p.name });
-                    }}
-                    index={i}
-                  />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                number={entryNo.get(project.id)}
+                index={i}
+                onEdit={openEditModal}
+                onDelete={(id) => setDeleteConfirmId(id)}
+                onTagClick={setTagFilter}
+                activeTagFilter={tagFilter}
+                onDuplicate={duplicateProject}
+                onCardClick={bulkMode ? (p) => toggleSelected(p.id) : setDetailProject}
+                onPin={togglePin}
+                selectMode={bulkMode}
+                selected={selected.has(project.id)}
+                onThumbnailChange={(id, url) => { const p = projects.find((x) => x.id === id); if (p) updateProject(id, { ...p, thumbnail: url }); }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div key={displayKey} className="v-list" role="list">
+            {displayed.map((project, i) => (
+              <div
+                key={project.id}
+                role="listitem"
+                tabIndex={0}
+                className={`v-row${bulkMode && selected.has(project.id) ? " is-selected" : ""}`}
+                style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}
+                onClick={() => (bulkMode ? toggleSelected(project.id) : setDetailProject(project))}
+                onKeyDown={(e) => { if (e.key === "Enter") (bulkMode ? toggleSelected(project.id) : setDetailProject(project)); }}
+              >
+                <span className="v-card-no hide-sm">
+                  {bulkMode ? (
+                    <span className={`v-check${selected.has(project.id) ? " is-on" : ""}`}>{selected.has(project.id) && <ICheck />}</span>
+                  ) : `№${pad(entryNo.get(project.id) ?? i + 1, 3)}`}
+                </span>
+                <div className="v-row-thumb"><Cover name={project.name} src={project.thumbnail} showCode={false} /></div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="v-row-name">{project.pinned && <IPin style={{ display: "inline-block", width: 14, height: 14, color: "var(--v-signal)", marginRight: 8, verticalAlign: "middle" }} />}{project.name}</div>
+                </div>
+                <div className="v-row-stack hide-sm">{project.techStack.join("  /  ") || "—"}</div>
+                <div><StatusBadge status={project.status} /></div>
+                <div className="v-row-date hide-sm">{formatDate(project.deploymentDate)}</div>
+                <div className="v-row-actions hide-sm">
+                  <button className={`v-icon-btn${project.pinned ? " is-on" : ""}`} onClick={(e) => { e.stopPropagation(); togglePin(project.id); }} aria-label={project.pinned ? "Unpin" : "Pin"} title={project.pinned ? "Unpin" : "Pin"}><IPin /></button>
+                  <button className="v-icon-btn" onClick={(e) => { e.stopPropagation(); openEditModal(project); }} aria-label="Edit" title="Edit"><IEdit /></button>
+                  <button className="v-icon-btn is-danger" onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }} aria-label="Delete" title="Delete"><ITrash /></button>
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          // List view
-          <div key={displayKey} className="flex flex-col gap-2">
-            {displayed.map((project, i) => {
-              const STATUS_COLOR: Record<string, string> = { Live: "#10b981", Maintenance: "#f59e0b", Deprecated: "#ef4444" };
-              const dot = STATUS_COLOR[project.status] ?? "#64748b";
-              return (
-                <div
-                  key={project.id}
-                  className="card-enter flex items-center gap-4 rounded-xl px-4 py-3 transition-colors cursor-pointer"
-                  style={{ animationDelay: `${i * 50}ms`, background: "#ffffff", border: "1px solid rgba(124,58,237,0.1)", boxShadow: "0 1px 6px rgba(124,58,237,0.04)" }}
-                  onClick={() => !bulkMode && setDetailProject(project)}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(124,58,237,0.3)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(124,58,237,0.1)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(124,58,237,0.1)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 6px rgba(124,58,237,0.04)"; }}
-                >
-                  {/* Bulk checkbox */}
-                  {bulkMode && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleSelected(project.id); }}
-                      className="flex-shrink-0 flex h-5 w-5 items-center justify-center rounded-full transition-all"
-                      style={selected.has(project.id)
-                        ? { background: "#7c3aed", boxShadow: "0 2px 8px rgba(124,58,237,0.4)" }
-                        : { background: "transparent", border: "2px solid rgba(124,58,237,0.3)" }
-                      }
-                    >
-                      {selected.has(project.id) && (
-                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="#ffffff"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>
-                      )}
-                    </button>
-                  )}
-                  {/* Thumbnail / color swatch */}
-                  <div className="h-10 w-10 flex-shrink-0 rounded-lg overflow-hidden" style={{ background: project.thumbnail ? undefined : "linear-gradient(135deg, #7c3aed, #db2777)" }}>
-                    {project.thumbnail && <img src={project.thumbnail} alt="" className="h-full w-full object-cover" />}
-                  </div>
-                  {/* Name + stack */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold" style={{ color: "#0d0b1e", fontFamily: "'Syne', system-ui, sans-serif" }}>{project.name}</p>
-                    <p className="truncate text-xs" style={{ color: "#9693b8" }}>
-                      {project.techStack.slice(0, 4).join(" · ")}
-                      {project.techStack.length > 4 ? " · …" : ""}
-                    </p>
-                  </div>
-                  {/* Status dot + label */}
-                  <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: dot }} />
-                    <span className="text-xs" style={{ color: dot }}>{project.status}</span>
-                  </div>
-                  {/* Date */}
-                  <span className="hidden md:block text-xs flex-shrink-0" style={{ color: "#9693b8" }}>
-                    {project.deploymentDate}
-                  </span>
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); togglePin(project.id); }}
-                      className="rounded-lg p-1.5 transition-colors"
-                      title={project.pinned ? "Unpin" : "Pin (max 3)"}
-                      style={project.pinned ? { color: "#7c3aed", background: "rgba(124,58,237,0.1)" } : { color: "#9693b8" }}
-                      onMouseEnter={(e) => { if (!project.pinned) { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.08)"; } }}
-                      onMouseLeave={(e) => { if (!project.pinned) { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; } }}
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10.447 1.053a.75.75 0 0 0-1.394.22L8.08 5H4.75A2.25 2.25 0 0 0 2.5 7.25v.5c0 .414.336.75.75.75h4.5v5.585L5.26 15.98a.75.75 0 1 0 1.06 1.06L8.5 14.86V15a.75.75 0 0 0 1.5 0v-.14l2.18 2.18a.75.75 0 0 0 1.06-1.06l-2.49-2.495V8.5h4.5a.75.75 0 0 0 .75-.75v-.5A2.25 2.25 0 0 0 13.75 5H10.42l-.973-3.947Z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); openEditModal(project); }}
-                      className="rounded-lg p-1.5 transition-colors"
-                      style={{ color: "#9693b8" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#7c3aed"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.1)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(project.id); }}
-                      className="rounded-lg p-1.5 transition-colors"
-                      style={{ color: "#9693b8" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#dc2626"; (e.currentTarget as HTMLButtonElement).style.background = "rgba(220,38,38,0.08)"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; (e.currentTarget as HTMLButtonElement).style.background = "transparent"; }}
-                    >
-                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         )}
-      </div>
+      </main>
 
-      {/* Project Detail Modal */}
+      {/* ── Footer ── */}
+      <footer className="v-footer">
+        <div className="v-wrap">
+          <div className="v-footer-mark" aria-hidden>LOCKER</div>
+        </div>
+        <div className="v-wrap v-footer-inner">
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>© {year} Nurazwann bin Ismail · Pejabat Pendidikan Daerah Dalat</span>
+          <span className="v-mono" style={{ color: "var(--v-faint)" }}>All rights reserved</span>
+        </div>
+      </footer>
+
+      {/* ── Detail & form drawers ── */}
       <ProjectDetailModal
         project={detailProject}
+        number={detailProject ? entryNo.get(detailProject.id) : undefined}
         onClose={() => setDetailProject(null)}
         onEdit={(p) => { setDetailProject(null); openEditModal(p); }}
         onNotesChange={updateNotes}
@@ -628,85 +429,40 @@ export default function DashboardPage() {
         notesPin={profile.notesPin}
         isOwner={true}
       />
+      <ProjectModal isOpen={modalOpen} project={editingProject} onClose={() => { setModalOpen(false); setEditingProject(null); }} onSave={handleSave} />
 
-      {/* Add/Edit Modal */}
-      <ProjectModal
-        isOpen={modalOpen}
-        project={editingProject}
-        onClose={() => { setModalOpen(false); setEditingProject(null); }}
-        onSave={handleSave}
-      />
-
-      {/* Delete confirmation */}
+      {/* ── Delete confirm ── */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0"
-            style={{ background: "rgba(14,11,30,0.5)", backdropFilter: "blur(12px)" }}
-            onClick={() => setDeleteConfirmId(null)}
-          />
-          <div
-            className="relative z-10 w-full max-w-sm rounded-2xl p-6"
-            style={{ background: "#ffffff", border: "1px solid rgba(220,38,38,0.2)", boxShadow: "0 8px 40px rgba(220,38,38,0.12), 0 2px 12px rgba(0,0,0,0.08)" }}
-          >
-            <div
-              className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
-              style={{ background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)" }}
-            >
-              <svg className="h-6 w-6" style={{ color: "#dc2626" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-              </svg>
-            </div>
-            <h3 className="mb-1 text-base font-bold" style={{ color: "#0d0b1e", fontFamily: "'Syne', system-ui, sans-serif" }}>Delete project?</h3>
-            <p className="mb-5 text-sm" style={{ color: "#5b5880" }}>
-              <span className="font-semibold" style={{ color: "#0d0b1e" }}>&ldquo;{projectToDelete?.name}&rdquo;</span> will be permanently removed.
+        <div className="v-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-title">
+          <div className="v-backdrop" onClick={() => setDeleteConfirmId(null)} />
+          <div className="v-dialog v-hud">
+            <span className="v-eyebrow" style={{ color: "var(--v-coral)" }}>Irreversible</span>
+            <h3 id="delete-title" className="v-dialog-title" style={{ marginTop: 14 }}>Remove from the locker?</h3>
+            <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "12px 0 24px" }}>
+              <span style={{ color: "var(--v-text)" }}>&ldquo;{projectToDelete?.name}&rdquo;</span> will be deleted. You&apos;ll have five seconds to undo.
             </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setDeleteConfirmId(null)}
-                className="rounded-xl px-4 py-2 text-sm font-medium transition-colors"
-                style={{ background: "rgba(124,58,237,0.05)", color: "#5b5880", border: "1px solid rgba(124,58,237,0.15)" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.1)"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.05)"; }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="rounded-xl px-4 py-2 text-sm font-medium text-white transition-colors"
-                style={{ background: "#dc2626" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#ef4444"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#dc2626"; }}
-              >
-                Delete
-              </button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+              <button onClick={() => setDeleteConfirmId(null)} className="v-btn">Keep it</button>
+              <button onClick={confirmDelete} className="v-btn v-btn-danger" autoFocus><ITrash /> Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Keyboard shortcuts modal */}
+      {/* ── Shortcuts ── */}
       {showShortcuts && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0" style={{ background: "rgba(14,11,30,0.5)", backdropFilter: "blur(12px)" }} onClick={() => setShowShortcuts(false)} />
-          <div className="relative z-10 w-full max-w-sm rounded-2xl p-6" style={{ background: "#ffffff", border: "1px solid rgba(124,58,237,0.2)", boxShadow: "0 8px 40px rgba(124,58,237,0.15), 0 2px 12px rgba(0,0,0,0.08)" }}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold" style={{ color: "#0d0b1e", fontFamily: "'Syne', system-ui, sans-serif" }}>Keyboard Shortcuts</h3>
-              <button onClick={() => setShowShortcuts(false)} style={{ color: "#9693b8" }}><svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg></button>
+        <div className="v-overlay" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title">
+          <div className="v-backdrop" onClick={() => setShowShortcuts(false)} />
+          <div className="v-dialog v-hud" style={{ width: "min(380px, calc(100% - 32px))" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <h3 id="shortcuts-title" className="v-dialog-title">Shortcuts</h3>
+              <button onClick={() => setShowShortcuts(false)} className="v-icon-btn" aria-label="Close"><IX /></button>
             </div>
-            <div className="space-y-2">
-              {([
-                ["N", "New project"],
-                ["/", "Focus search"],
-                ["G", "Grid view"],
-                ["L", "List view"],
-                ["T", "Timeline view"],
-                ["?", "Toggle this panel"],
-                ["Esc", "Close modal"],
-              ] as [string, string][]).map(([key, label]) => (
-                <div key={key} className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: "#5b5880" }}>{label}</span>
-                  <kbd className="rounded-lg px-2.5 py-1 text-xs font-bold font-mono" style={{ background: "rgba(124,58,237,0.08)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.25)" }}>{key}</kbd>
+            <div style={{ marginTop: 18, borderTop: "1px solid var(--v-line)" }}>
+              {[["N", "New project"], ["/", "Search"], ["G", "Grid view"], ["L", "List view"], ["T", "Timeline view"], ["?", "Toggle this panel"], ["Esc", "Close drawer"]].map(([key, label]) => (
+                <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: "1px solid var(--v-line)" }}>
+                  <span style={{ color: "var(--v-muted)" }}>{label}</span>
+                  <kbd className="v-kbd">{key}</kbd>
                 </div>
               ))}
             </div>
@@ -714,101 +470,93 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Bulk action bar */}
+      {/* ── Toasts ── */}
       {bulkMode && selected.size > 0 && (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 flex items-center gap-4 rounded-2xl px-5 py-3"
-          style={{
-            transform: "translateX(-50%)",
-            background: "#ffffff",
-            border: "1px solid rgba(220,38,38,0.25)",
-            backdropFilter: "blur(16px)",
-            boxShadow: "0 8px 32px rgba(220,38,38,0.12), 0 2px 12px rgba(0,0,0,0.08)",
-            animation: "slideUp 0.25s ease",
-          }}
-        >
-          <span className="text-sm font-semibold" style={{ color: "#0d0b1e" }}>{selected.size} selected</span>
-          <button
-            onClick={() => setSelected(new Set(displayed.map(p => p.id)))}
-            className="text-xs font-medium transition-colors"
-            style={{ color: "#7c3aed" }}
-          >
-            Select all
-          </button>
-          <button
-            onClick={bulkDelete}
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-1.5 text-xs font-semibold text-white transition-colors"
-            style={{ background: "#dc2626", boxShadow: "0 0 12px rgba(220,38,38,0.4)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#ef4444"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#dc2626"; }}
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" />
-            </svg>
-            Delete {selected.size}
-          </button>
+        <div className="v-toast is-bottom">
+          <span><b style={{ fontWeight: 600 }}>{selected.size}</b> selected</span>
+          <button onClick={() => setSelected(new Set(displayed.map((p) => p.id)))} className="v-btn v-btn-sm v-btn-quiet">Select all</button>
+          <button onClick={bulkDelete} className="v-btn v-btn-sm v-btn-danger"><ITrash /> Delete {selected.size}</button>
         </div>
       )}
-
-      {/* Milestone toast */}
       {milestoneToast && (
-        <div
-          className="fixed top-6 left-1/2 z-50 flex items-center gap-3 rounded-2xl px-6 py-3"
-          style={{
-            transform: "translateX(-50%)",
-            background: "#ffffff",
-            border: "1px solid rgba(124,58,237,0.25)",
-            backdropFilter: "blur(16px)",
-            boxShadow: "0 8px 32px rgba(124,58,237,0.15), 0 2px 12px rgba(0,0,0,0.08)",
-            animation: "slideDown 0.3s ease",
-          }}
-        >
-          <span className="text-sm font-bold" style={{ color: "#0d0b1e" }}>{milestoneToast}</span>
-          <button onClick={() => setMilestoneToast(null)} style={{ color: "#9693b8" }}>
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-          </button>
+        <div className="v-toast is-top">
+          <span className="v-led is-live" />
+          <span>{milestoneToast}</span>
+          <button onClick={() => setMilestoneToast(null)} className="v-icon-btn" aria-label="Dismiss"><IX /></button>
         </div>
       )}
-
-      {/* Copyright Footer */}
-      <CopyrightFooter />
-
-      {/* Undo delete toast */}
       {undoToast && (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 flex items-center gap-3 rounded-2xl px-5 py-3"
-          style={{
-            transform: "translateX(-50%)",
-            background: "#ffffff",
-            border: "1px solid rgba(124,58,237,0.2)",
-            backdropFilter: "blur(16px)",
-            boxShadow: "0 8px 32px rgba(124,58,237,0.1), 0 2px 12px rgba(0,0,0,0.08)",
-            animation: "slideUp 0.25s ease",
-          }}
-        >
-          <svg className="h-4 w-4 flex-shrink-0" style={{ color: "#dc2626" }} viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5Z" clipRule="evenodd" />
-          </svg>
-          <span className="text-sm" style={{ color: "#5b5880" }}>
-            <span className="font-semibold" style={{ color: "#0d0b1e" }}>&ldquo;{undoToast.project.name}&rdquo;</span> deleted
-          </span>
-          <button
-            onClick={() => {
-              importProjects([undoToast.project]);
-              dismissUndo();
-            }}
-            className="ml-1 rounded-lg px-3 py-1 text-xs font-semibold transition-colors"
-            style={{ background: "rgba(124,58,237,0.1)", color: "#7c3aed", border: "1px solid rgba(124,58,237,0.25)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.18)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(124,58,237,0.1)"; }}
-          >
-            Undo
-          </button>
-          <button onClick={dismissUndo} className="ml-1 transition-colors" style={{ color: "#9693b8" }} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#5b5880"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = "#9693b8"; }}>
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
-          </button>
+        <div className="v-toast is-bottom">
+          <span><span style={{ color: "var(--v-muted)" }}>Deleted</span> &ldquo;{undoToast.project.name}&rdquo;</span>
+          <button onClick={() => { importProjects([undoToast.project]); dismissUndo(); }} className="v-btn v-btn-sm" style={{ borderColor: "rgba(var(--v-c1-rgb),0.45)", color: "var(--v-signal)" }}>Undo</button>
+          <button onClick={dismissUndo} className="v-icon-btn" aria-label="Dismiss"><IX /></button>
         </div>
       )}
     </div>
+  );
+}
+
+function EmptyLocker({ onAdd }: { onAdd: () => void }) {
+  return (
+    <section className="v-empty">
+      <div className="v-rise">
+        <h3 className="v-empty-title">Nothing in here <em>yet.</em></h3>
+        <p style={{ color: "var(--v-muted)", fontSize: 15.5, lineHeight: 1.65, marginTop: 18, maxWidth: 460 }}>
+          Every locker starts empty. Add the first app you&apos;ve shipped and it gets a number, a cover and a permanent place in the index.
+        </p>
+        <ol className="v-steps">
+          <li><span>01</span><span><b>Name it</b> — and say what it does in a sentence.</span></li>
+          <li><span>02</span><span><b>Tag the stack</b> — Next.js, Laravel, whatever it runs on.</span></li>
+          <li><span>03</span><span><b>Link it live</b> — so anyone can open it in one click.</span></li>
+        </ol>
+        <button onClick={onAdd} className="v-btn v-btn-lg v-btn-primary"><IPlus /> Add your first project</button>
+      </div>
+      <LockerArt />
+    </section>
+  );
+}
+
+function LockerArt() {
+  const doors = Array.from({ length: 12 }, (_, i) => i);
+  return (
+    <svg className="v-locker-art v-rise" style={{ animationDelay: "150ms" }} viewBox="0 0 400 480" fill="none" aria-hidden>
+      <defs>
+        <radialGradient id="lk-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" style={{ stopColor: "var(--v-c2)", stopOpacity: 0.6 }} />
+          <stop offset="60%" style={{ stopColor: "var(--v-c1)", stopOpacity: 0.18 }} />
+          <stop offset="100%" style={{ stopColor: "var(--v-c1)", stopOpacity: 0 }} />
+        </radialGradient>
+        <linearGradient id="lk-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" style={{ stopColor: "var(--v-c1)" }} />
+          <stop offset="50%" style={{ stopColor: "var(--v-c2)" }} />
+          <stop offset="100%" style={{ stopColor: "var(--v-c3)" }} />
+        </linearGradient>
+      </defs>
+      <rect x="20" y="20" width="360" height="440" rx="18" style={{ stroke: "rgba(var(--v-ink-rgb),0.25)" }} />
+      {doors.map((i) => {
+        const col = i % 3, row = Math.floor(i / 3);
+        const x = 40 + col * 110, y = 40 + row * 104;
+        const open = i === 4;
+        return (
+          <g key={i}>
+            {open ? (
+              <>
+                <rect x={x} y={y} width="100" height="94" rx="8" style={{ fill: "var(--v-bg-2)" }} stroke="url(#lk-grad)" strokeWidth="1.5" />
+                <ellipse cx={x + 50} cy={y + 47} rx="74" ry="64" fill="url(#lk-glow)" />
+                <path d={`M${x} ${y} L${x - 14} ${y + 8} L${x - 14} ${y + 86} L${x} ${y + 94} Z`} style={{ fill: "var(--v-panel-2)", stroke: "rgba(var(--v-ink-rgb),0.3)" }} />
+                <text x={x + 50} y={y + 58} textAnchor="middle" fontFamily="Unbounded, sans-serif" fontWeight="700" fontSize="30" letterSpacing="-2" fill="url(#lk-grad)">01</text>
+              </>
+            ) : (
+              <>
+                <rect x={x} y={y} width="100" height="94" rx="8" style={{ fill: "var(--v-panel)", stroke: "rgba(var(--v-ink-rgb),0.16)" }} />
+                {[0, 1, 2].map((v) => <rect key={v} x={x + 18} y={y + 14 + v * 7} width="40" height="2.5" rx="1.25" style={{ fill: "rgba(var(--v-ink-rgb),0.14)" }} />)}
+                <rect x={x + 82} y={y + 40} width="4" height="16" rx="2" style={{ fill: "rgba(var(--v-ink-rgb),0.22)" }} />
+                <text x={x + 14} y={y + 84} fontFamily="Geist Mono, monospace" fontSize="9" letterSpacing="1.5" style={{ fill: "rgba(var(--v-ink-rgb),0.35)" }}>{String(i + 1).padStart(2, "0")}</text>
+              </>
+            )}
+          </g>
+        );
+      })}
+    </svg>
   );
 }

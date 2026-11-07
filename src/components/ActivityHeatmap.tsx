@@ -3,168 +3,83 @@
 import { useMemo } from "react";
 import type { Project } from "@/types/project";
 
-interface ActivityHeatmapProps {
-  projects: Project[];
-}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const LEVELS = ["rgba(var(--v-ink-rgb),0.09)", "rgba(var(--v-c1-rgb),0.35)", "var(--v-c1)", "var(--v-c2)", "var(--v-c3)"];
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const DAYS = ["","Mon","","Wed","","Fri",""];
-
-export default function ActivityHeatmap({ projects }: ActivityHeatmapProps) {
-  const { cells, monthLabels, maxCount } = useMemo(() => {
-    // Build a map of date → count using createdAt
+export default function ActivityHeatmap({ projects }: { projects: Project[] }) {
+  const { cells, monthLabels, maxCount, total } = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const p of projects) {
-      const day = p.createdAt.slice(0, 10); // "YYYY-MM-DD"
+      const day = (p.deploymentDate?.trim() || p.createdAt).slice(0, 10);
       counts[day] = (counts[day] ?? 0) + 1;
     }
 
-    // Generate 52 full weeks ending today (Sunday-aligned)
     const today = new Date();
-    // Snap to end of current week (Saturday)
     const endDate = new Date(today);
     endDate.setDate(today.getDate() + (6 - today.getDay()));
-
     const startDate = new Date(endDate);
     startDate.setDate(endDate.getDate() - 52 * 7 + 1);
 
     const cells: { date: string; count: number; col: number; row: number }[] = [];
     const monthLabels: { month: string; col: number }[] = [];
-
-    let d = new Date(startDate);
+    const d = new Date(startDate);
     let col = 0;
     let lastMonth = -1;
+    let total = 0;
 
     while (d <= endDate) {
-      if (d.getDay() === 0) {
-        // Check if new month started this week
-        if (d.getMonth() !== lastMonth) {
-          monthLabels.push({ month: MONTHS[d.getMonth()], col });
-          lastMonth = d.getMonth();
-        }
+      if (d.getDay() === 0 && d.getMonth() !== lastMonth) {
+        monthLabels.push({ month: MONTHS[d.getMonth()], col });
+        lastMonth = d.getMonth();
       }
-      const row = d.getDay(); // 0=Sun … 6=Sat
       const dateStr = d.toISOString().slice(0, 10);
-      cells.push({ date: dateStr, count: counts[dateStr] ?? 0, col, row });
-
+      const count = counts[dateStr] ?? 0;
+      total += count;
+      cells.push({ date: dateStr, count, col, row: d.getDay() });
       if (d.getDay() === 6) col++;
       d.setDate(d.getDate() + 1);
     }
 
-    const maxCount = Math.max(1, ...cells.map((c) => c.count));
-    return { cells, monthLabels, maxCount };
+    return { cells, monthLabels, maxCount: Math.max(1, ...cells.map((c) => c.count)), total };
   }, [projects]);
 
-  function cellColor(count: number) {
-    if (count === 0) return "rgba(124,58,237,0.07)";
-    const intensity = Math.min(count / maxCount, 1);
-    if (intensity < 0.25) return "rgba(124,58,237,0.25)";
-    if (intensity < 0.5)  return "rgba(124,58,237,0.5)";
-    if (intensity < 0.75) return "rgba(124,58,237,0.75)";
-    return "#7c3aed";
+  function level(count: number) {
+    if (count === 0) return 0;
+    return Math.max(1, Math.ceil((count / maxCount) * 4));
   }
 
-  function cellGlow(count: number) {
-    if (count === 0) return "none";
-    const intensity = Math.min(count / maxCount, 1);
-    return `0 0 ${3 + intensity * 6}px rgba(124,58,237,${0.2 + intensity * 0.5})`;
-  }
-
-  const CELL = 11;
-  const GAP = 2;
-  const cols = 52;
-  const rows = 7;
-  const width = cols * (CELL + GAP);
-  const height = rows * (CELL + GAP);
+  const CELL = 12, GAP = 3, STEP = CELL + GAP;
+  const width = 53 * STEP;
+  const height = 7 * STEP;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pb-2">
-      <div
-        className="rounded-2xl px-6 py-5"
-        style={{ background: "#ffffff", border: "1px solid rgba(124,58,237,0.12)", boxShadow: "0 2px 12px rgba(124,58,237,0.06)" }}
-      >
-        <div className="mb-3 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9693b8", fontFamily: "'Syne', system-ui, sans-serif" }}>
-            Project Activity
+    <section className="v-heat v-hud v-rise" style={{ animationDelay: "500ms" }} aria-label="Shipping activity over the last year">
+      <div className="v-heat-head">
+        <span className="v-eyebrow">Shipping activity · 52 weeks</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <span className="v-mono" style={{ color: "var(--v-text)" }}>{String(total).padStart(2, "0")} <span style={{ color: "var(--v-faint)" }}>shipped in 12 months</span></span>
+          <span className="v-heat-legend">
+            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginRight: 4 }}>Less</span>
+            {LEVELS.map((c) => <i key={c} style={{ background: c }} />)}
+            <span className="v-mono" style={{ fontSize: 10, color: "var(--v-faint)", marginLeft: 4 }}>More</span>
           </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs" style={{ color: "#9693b8" }}>Less</span>
-            {[0, 0.25, 0.5, 0.75, 1].map((v) => (
-              <div
-                key={v}
-                style={{
-                  width: 10, height: 10, borderRadius: 2,
-                  background: v === 0 ? "rgba(124,58,237,0.07)" : `rgba(124,58,237,${v})`,
-                }}
-              />
-            ))}
-            <span className="text-xs" style={{ color: "#9693b8" }}>More</span>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <div style={{ position: "relative", minWidth: width + 24 }}>
-            {/* Day labels */}
-            <div style={{ position: "absolute", left: 0, top: 16 }}>
-              {DAYS.map((d, i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: CELL + GAP,
-                    fontSize: 9,
-                    color: "#9693b8",
-                    lineHeight: `${CELL + GAP}px`,
-                    paddingRight: 4,
-                    textAlign: "right",
-                    width: 22,
-                  }}
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            {/* Month labels + grid */}
-            <div style={{ paddingLeft: 26 }}>
-              {/* Month labels */}
-              <div style={{ position: "relative", height: 14, marginBottom: 2 }}>
-                {monthLabels.map(({ month, col: c }, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      position: "absolute",
-                      left: c * (CELL + GAP),
-                      fontSize: 9,
-                      color: "#9693b8",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {month}
-                  </span>
-                ))}
-              </div>
-
-              {/* Grid */}
-              <svg width={width} height={height} style={{ display: "block", overflow: "visible" }}>
-                {cells.map(({ date, count, col: c, row: r }) => (
-                  <g key={date}>
-                    <rect
-                      x={c * (CELL + GAP)}
-                      y={r * (CELL + GAP)}
-                      width={CELL}
-                      height={CELL}
-                      rx={2}
-                      fill={cellColor(count)}
-                      style={{ filter: count > 0 ? `drop-shadow(${cellGlow(count)})` : "none" }}
-                    />
-                    <title>{date}: {count} project{count !== 1 ? "s" : ""}</title>
-                  </g>
-                ))}
-              </svg>
-            </div>
-          </div>
         </div>
       </div>
-    </div>
+
+      <div style={{ overflowX: "auto", scrollbarWidth: "none" }}>
+        <svg viewBox={`0 0 ${width} ${height + 18}`} width="100%" style={{ display: "block", minWidth: 640 }}>
+          {monthLabels.map(({ month, col }, i) => (
+            <text key={i} x={col * STEP} y={10} fontSize={10} fontFamily="Geist Mono, monospace" style={{ fill: "var(--v-faint)" }} letterSpacing="0.5">{month}</text>
+          ))}
+          <g transform="translate(0,18)">
+            {cells.map(({ date, count, col, row }) => (
+              <rect key={date} x={col * STEP} y={row * STEP} width={CELL} height={CELL} rx={3} style={{ fill: LEVELS[level(count)] }}>
+                <title>{date}: {count} project{count !== 1 ? "s" : ""}</title>
+              </rect>
+            ))}
+          </g>
+        </svg>
+      </div>
+    </section>
   );
 }
