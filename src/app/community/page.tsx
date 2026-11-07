@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useUser, SignInButton } from "@clerk/nextjs";
+import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
 import ThemePicker from "@/components/ThemePicker";
 import { IArrowLeft, IArrowUpRight, ILock, ISearch, LockerMark } from "@/components/icons";
 import { monogram, pad } from "@/lib/projectMeta";
@@ -33,10 +33,8 @@ const CX_CSS = `
 .cx-gate-panel { width: min(420px, 100%); padding: 32px 28px; text-align: center; border: 1px solid var(--v-line-2); border-radius: 18px; background-color: var(--v-panel); box-shadow: 0 30px 80px -30px rgba(var(--v-scrim-rgb),0.45), 0 0 50px -24px rgba(var(--v-c2-rgb),0.6); animation: vPop .4s var(--v-ease) both; }
 .cx-lock { width: 56px; height: 56px; margin: 22px auto 0; display: grid; place-items: center; border-radius: 16px; color: var(--v-signal); background: rgba(var(--v-c1-rgb),0.1); border: 1px solid rgba(var(--v-c1-rgb),0.35); box-shadow: 0 0 26px -8px rgba(var(--v-c1-rgb),0.7); }
 .cx-lock svg { width: 24px; height: 24px; }
-.cx-code { text-align: center; font: 600 15px var(--v-mono); letter-spacing: 0.2em; text-transform: uppercase; height: 46px; }
 `;
 
-const SESSION_KEY_STORE = "prestij_community_key";
 
 function Shell({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   const year = new Date().getFullYear();
@@ -76,71 +74,16 @@ export default function CommunityPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  // unlocked=null → checking, false → show gate, true → show community
-  const [unlocked, setUnlocked] = useState<boolean | null>(null);
-  const [, setSessionKey] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [verifying, setVerifying] = useState(false);
-
-  async function loadProfiles(key: string) {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/community", {
-        credentials: "include",
-        headers: { "x-community-key": key },
-      });
-      if (res.status === 401) { setUnlocked(false); return; }
-      const data = await res.json();
-      if (Array.isArray(data)) setProfiles(data);
-      setUnlocked(true);
-    } catch {}
-    finally { setLoading(false); }
-  }
-
-  // Signed-in users skip the gate; guests check sessionStorage for saved key
+  // Only signed-in members can see the community
   useEffect(() => {
-    if (!isLoaded) return;
-    if (isSignedIn) {
-      loadProfiles("");
-    } else {
-      const saved = sessionStorage.getItem(SESSION_KEY_STORE);
-      if (saved) {
-        setSessionKey(saved);
-        loadProfiles(saved);
-      } else {
-        setUnlocked(false);
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!isLoaded || !isSignedIn) return;
+    setLoading(true);
+    fetch("/api/community", { credentials: "include" })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => { if (Array.isArray(data)) setProfiles(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [isLoaded, isSignedIn]);
-
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    setVerifying(true);
-    setCodeError("");
-    try {
-      const res = await fetch("/api/public/community/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: codeInput }),
-      });
-      const { ok } = await res.json();
-      if (ok) {
-        const key = codeInput.trim().toUpperCase();
-        sessionStorage.setItem(SESSION_KEY_STORE, key);
-        setSessionKey(key);
-        await loadProfiles(key);
-      } else {
-        setCodeError("Incorrect access code. Please try again.");
-        setCodeInput("");
-      }
-    } catch {
-      setCodeError("Network error. Please try again.");
-    } finally {
-      setVerifying(false);
-    }
-  }
 
   const filtered = useMemo(() => {
     if (!query.trim()) return profiles;
@@ -150,42 +93,8 @@ export default function CommunityPage() {
 
   const homeLink = <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Home</span></Link>;
 
-  // ── Gate ──
-  if (unlocked === false) return (
-    <Shell right={homeLink}>
-      <div className="cx-gate">
-        <form onSubmit={handleVerify} className="cx-gate-panel v-hud">
-          <span className="v-eyebrow">Restricted access</span>
-          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>Project Locker Community</h1>
-          <p className="v-mono" style={{ marginTop: 8, color: "var(--v-faint)", fontSize: 10 }}>Members only</p>
-          <div className="cx-lock"><ILock /></div>
-          <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
-            This community is restricted.<br />Enter your access code to continue.
-          </p>
-          <input
-            value={codeInput}
-            onChange={(e) => { setCodeInput(e.target.value); setCodeError(""); }}
-            placeholder="Access code"
-            autoFocus
-            aria-label="Access code"
-            className={`v-input cx-code${codeError ? " is-error" : ""}`}
-          />
-          {codeError && <p className="v-error" style={{ marginTop: 10 }}>{codeError}</p>}
-          <button type="submit" disabled={verifying || !codeInput.trim()} className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%", marginTop: 14 }}>
-            {verifying ? "Verifying…" : "Enter community"}
-          </button>
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid var(--v-line)" }}>
-            <SignInButton mode="modal">
-              <button type="button" className="v-btn v-btn-sm v-btn-quiet">Sign in with account instead <IArrowUpRight /></button>
-            </SignInButton>
-          </div>
-        </form>
-      </div>
-    </Shell>
-  );
-
-  // ── Checking access ──
-  if (unlocked === null) return (
+  // ── Checking sign-in ──
+  if (!isLoaded) return (
     <Shell>
       <div className="cx-gate">
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
@@ -196,19 +105,32 @@ export default function CommunityPage() {
     </Shell>
   );
 
+  // ── Signed out: members only ──
+  if (!isSignedIn) return (
+    <Shell right={homeLink}>
+      <div className="cx-gate">
+        <div className="cx-gate-panel v-hud">
+          <span className="v-eyebrow">Members only</span>
+          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>Project Locker Community</h1>
+          <div className="cx-lock"><ILock /></div>
+          <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
+            Sign in to meet other builders<br />and browse their portfolios.
+          </p>
+          <SignInButton mode="modal">
+            <button type="button" className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%" }}>Sign in <IArrowUpRight /></button>
+          </SignInButton>
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--v-line)" }}>
+            <SignUpButton mode="modal">
+              <button type="button" className="v-btn v-btn-sm v-btn-quiet">New here? Create an account</button>
+            </SignUpButton>
+          </div>
+        </div>
+      </div>
+    </Shell>
+  );
+
   return (
-    <Shell
-      right={
-        <>
-          <Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">{isSignedIn ? "My locker" : "Home"}</span></Link>
-          {isLoaded && !isSignedIn && (
-            <SignInButton mode="modal">
-              <button className="v-btn v-btn-sm v-btn-primary">Sign in</button>
-            </SignInButton>
-          )}
-        </>
-      }
-    >
+    <Shell right={<Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">My locker</span></Link>}>
       <main className="v-main v-wrap">
         <header className="cx-hero">
           <span className="v-eyebrow v-rise">Builders &amp; makers · {loading ? "––" : pad(profiles.length)} members</span>

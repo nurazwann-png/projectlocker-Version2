@@ -2,16 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
-  // Signed-in Clerk users pass automatically
+export async function GET() {
   const { userId } = await auth();
-  if (!userId) {
-    // Guests must supply the access code via header
-    const key = req.headers.get("x-community-key") ?? "";
-    const expected = process.env.COMMUNITY_ACCESS_CODE ?? "";
-    if (!expected || key.trim().toUpperCase() !== expected.toUpperCase())
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!userId) return NextResponse.json({ error: "Sign in to view the community" }, { status: 401 });
 
   const profiles = await prisma.profile.findMany({
     where: { username: { not: null } },
