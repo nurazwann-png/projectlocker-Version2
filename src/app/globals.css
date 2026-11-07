@@ -862,7 +862,20 @@ select.v-input option { background: var(--v-panel-2); color: var(--v-text); }
 .lx-step-node { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; background: var(--v-bg); border: 1px solid rgba(var(--v-c1-rgb),0.5); font: 600 15px var(--v-display); color: var(--v-signal); box-shadow: 0 0 30px -6px rgba(var(--v-c1-rgb),0.7); }
 .lx-step h3 { font-family: var(--v-display) !important; font-weight: 500; font-size: 20px; letter-spacing: -0.035em; margin-top: 24px !important; }
 .lx-step p { color: var(--v-muted); font-size: 14.5px; line-height: 1.6; margin-top: 10px; max-width: 32ch; }
-@media (max-width: 760px) { .lx-steps { grid-template-columns: 1fr; gap: 36px; } .lx-steps::before { left: 27px; right: auto; top: 0; bottom: 0; width: 1px; height: auto; } }
+.lx-step-node { position: relative; z-index: 1; }
+@media (max-width: 760px) {
+  .lx-steps { grid-template-columns: 1fr; gap: 32px; }
+  .lx-steps::before { display: none; }
+  /* Number on the left, text beside it; the line only links the numbers */
+  .lx-step { display: grid; grid-template-columns: 54px minmax(0, 1fr); column-gap: 18px; align-items: start; }
+  .lx-step-node { grid-row: 1 / span 2; }
+  .lx-step h3 { grid-column: 2; margin-top: 12px !important; }
+  .lx-step p { grid-column: 2; margin-top: 8px; }
+  .lx-step:not(:last-child)::after {
+    content: ""; position: absolute; left: 27px; top: 54px; bottom: -32px; width: 1px;
+    background: var(--v-grad); opacity: 0.6; box-shadow: 0 0 10px rgba(var(--v-c2-rgb),0.7);
+  }
+}
 
 .lx-cta { position: relative; overflow: hidden; margin-top: clamp(80px, 11vw, 140px); padding: clamp(56px, 9vw, 110px) clamp(20px, 5vw, 64px) clamp(150px, 16vw, 200px); border-radius: 22px; border: 1px solid var(--v-line-2); background-color: rgba(var(--v-surface-rgb),0.9); text-align: center; }
 .lx-cta .v-floor { height: 48%; opacity: 0.75; }
