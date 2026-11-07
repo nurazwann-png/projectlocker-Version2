@@ -89,7 +89,6 @@ export default function CommunityPage() {
         <header className="cx-hero">
           <span className="v-eyebrow v-rise">Builders &amp; makers · {loading ? "––" : pad(profiles.length)} members</span>
           <h1 className="cx-title v-rise" style={{ animationDelay: "100ms" }}>Meet the <span className="v-grad-text">community.</span></h1>
-          <p className="v-mono v-rise" style={{ marginTop: 18, animationDelay: "200ms", color: "var(--v-muted)", fontSize: 12 }}>MoE Agentic AI EcoSystem</p>
         </header>
 
         <label className="v-search cx-search">
