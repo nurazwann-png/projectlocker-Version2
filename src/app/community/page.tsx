@@ -2,9 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
 import ThemePicker from "@/components/ThemePicker";
-import { IArrowLeft, IArrowUpRight, ILock, ISearch, LockerMark } from "@/components/icons";
+import { IArrowLeft, IArrowUpRight, ISearch, LockerMark } from "@/components/icons";
 import { monogram, pad } from "@/lib/projectMeta";
 
 interface CommunityProfile {
@@ -29,10 +28,6 @@ const CX_CSS = `
 .cx-title { font-family: var(--v-display); font-weight: 500; font-size: clamp(34px, 6vw, 76px); line-height: 1; letter-spacing: -0.055em; margin-top: 18px; }
 .cx-search { max-width: 560px; margin: 0 auto 36px; }
 .cx-search .v-input { width: 100%; height: 44px; }
-.cx-gate { min-height: calc(100vh - 62px); display: grid; place-items: center; padding: 32px 16px; position: relative; z-index: 1; }
-.cx-gate-panel { width: min(420px, 100%); padding: 32px 28px; text-align: center; border: 1px solid var(--v-line-2); border-radius: 18px; background-color: var(--v-panel); box-shadow: 0 30px 80px -30px rgba(var(--v-scrim-rgb),0.45), 0 0 50px -24px rgba(var(--v-c2-rgb),0.6); animation: vPop .4s var(--v-ease) both; }
-.cx-lock { width: 56px; height: 56px; margin: 22px auto 0; display: grid; place-items: center; border-radius: 16px; color: var(--v-signal); background: rgba(var(--v-c1-rgb),0.1); border: 1px solid rgba(var(--v-c1-rgb),0.35); box-shadow: 0 0 26px -8px rgba(var(--v-c1-rgb),0.7); }
-.cx-lock svg { width: 24px; height: 24px; }
 `;
 
 
@@ -69,65 +64,24 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 }
 
 export default function CommunityPage() {
-  const { isSignedIn, isLoaded } = useUser();
   const [profiles, setProfiles] = useState<CommunityProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
-  // Only signed-in members can see the community
+  // Open to everyone for now — sign-in will be required again later.
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) return;
-    setLoading(true);
-    fetch("/api/community", { credentials: "include" })
+    fetch("/api/community")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => { if (Array.isArray(data)) setProfiles(data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn]);
+  }, []);
 
   const filtered = useMemo(() => {
     if (!query.trim()) return profiles;
     const q = query.toLowerCase();
     return profiles.filter((p) => p.username?.toLowerCase().includes(q) || p.bio?.toLowerCase().includes(q));
   }, [profiles, query]);
-
-  const homeLink = <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Home</span></Link>;
-
-  // ── Checking sign-in ──
-  if (!isLoaded) return (
-    <Shell>
-      <div className="cx-gate">
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
-          <div className="px-spinner" />
-          <span className="v-mono" style={{ color: "var(--v-signal)" }}>Checking access…</span>
-        </div>
-      </div>
-    </Shell>
-  );
-
-  // ── Signed out: members only ──
-  if (!isSignedIn) return (
-    <Shell right={homeLink}>
-      <div className="cx-gate">
-        <div className="cx-gate-panel v-hud">
-          <span className="v-eyebrow">Members only</span>
-          <h1 className="v-dialog-title" style={{ marginTop: 14, fontSize: 26 }}>Project Locker Community</h1>
-          <div className="cx-lock"><ILock /></div>
-          <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
-            Sign in to meet other builders<br />and browse their portfolios.
-          </p>
-          <SignInButton mode="modal">
-            <button type="button" className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%" }}>Sign in <IArrowUpRight /></button>
-          </SignInButton>
-          <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--v-line)" }}>
-            <SignUpButton mode="modal">
-              <button type="button" className="v-btn v-btn-sm v-btn-quiet">New here? Create an account</button>
-            </SignUpButton>
-          </div>
-        </div>
-      </div>
-    </Shell>
-  );
 
   return (
     <Shell right={<Link href="/" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">My locker</span></Link>}>
