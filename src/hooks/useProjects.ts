@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import type { Project, ProjectFormData } from "@/types/project";
 
 export type StorageMode = "loading" | "local" | "cloud";
@@ -92,7 +92,7 @@ function newLocalProject(data: ProjectFormData): Project {
 }
 
 export function useProjects() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSession();
   const mode: StorageMode = !isLoaded ? "loading" : isSignedIn ? "cloud" : "local";
 
   const [projects, setProjects] = useState<Project[]>([]);

@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID ?? "";
-
 async function checkAdmin(req: Request) {
-  const { userId } = await auth();
+  const { isAdmin } = await auth();
   const pinToken = req.headers.get("x-admin-pin");
   const adminPin = process.env.ADMIN_PIN ?? "";
-  return (!!userId && userId === ADMIN_USER_ID) || (!!adminPin && pinToken === adminPin);
+  return isAdmin || (!!adminPin && pinToken === adminPin);
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ userId: string }> }) {

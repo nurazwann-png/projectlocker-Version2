@@ -1,47 +1,27 @@
-import { NextResponse } from "next/server";
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE, verifySessionToken } from "@/lib/sessionToken";
 
-// The locker itself — only for signed-in users.
-const isLockerRoute = createRouteMatcher(["/"]);
+// Pages a signed-out visitor is sent to /sign-in from. API routes check the
+// session themselves and answer 401, so they aren't listed here.
+const PROTECTED_PAGES = [/^\/$/];
+// Signed-in users have no reason to see these, so send them to their locker.
+const AUTH_PAGES = [/^\/sign-in\/?$/, /^\/sign-up\/?$/];
 
-const isPublicRoute = createRouteMatcher([
-  "/landing(.*)",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/u/(.*)",
-  "/s/(.*)",
-  "/community(.*)",
-  "/api/public/(.*)",
-  "/api/community",
-  "/api/admin/(.*)",
-  "/admin",
-  // PWA static assets — must be publicly accessible for install to work
-  "/manifest.json",
-  "/sw.js",
-  "/icon(.*)",
-  "/bg.jpg",
-]);
+export default function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const signedIn = !!verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (isLockerRoute(request)) {
-    const { userId } = await auth();
-    if (!userId) {
-      // Send signed-out visitors to our own sign-in page, then back to the locker.
-      const signIn = new URL("/sign-in", request.url);
-      signIn.searchParams.set("redirect_url", request.nextUrl.pathname + request.nextUrl.search);
-      return NextResponse.redirect(signIn);
-    }
-    return;
+  if (!signedIn && PROTECTED_PAGES.some((re) => re.test(pathname))) {
+    const signIn = new URL("/sign-in", request.url);
+    signIn.searchParams.set("redirect_url", pathname + search);
+    return NextResponse.redirect(signIn);
   }
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  if (signedIn && AUTH_PAGES.some((re) => re.test(pathname))) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
-});
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
-    "/__clerk/:path*",
-  ],
+  matcher: ["/", "/sign-in", "/sign-up"],
 };

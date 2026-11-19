@@ -9,6 +9,25 @@ datasource db {
   directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
+// A registered account. Passwords are stored only as salted scrypt hashes.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  appearance   Json?
+  sessionVersion Int    @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Clerk accounts from before Project Locker had its own login. When someone
+// registers with the same email, their old rows move to the new account.
+model LegacyAccount {
+  email        String @id
+  legacyUserId String @unique
+}
+
 model Profile {
   id              String   @id @default(cuid())
   userId          String   @unique

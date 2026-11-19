@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import ThemePicker from "@/components/ThemePicker";
 import { IArrowLeft, IArrowUpRight, ILock, ISearch, LockerMark } from "@/components/icons";
 import { monogram, pad } from "@/lib/projectMeta";
@@ -69,7 +69,7 @@ function Shell({ children, right }: { children: React.ReactNode; right?: React.R
 }
 
 export default function CommunityPage() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useSession();
   const [profiles, setProfiles] = useState<CommunityProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -116,13 +116,9 @@ export default function CommunityPage() {
           <p style={{ color: "var(--v-muted)", lineHeight: 1.6, margin: "18px 0 22px" }}>
             Sign in to meet other builders<br />and browse their portfolios.
           </p>
-          <SignInButton mode="modal">
-            <button type="button" className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%" }}>Sign in <IArrowUpRight /></button>
-          </SignInButton>
+          <Link href="/sign-in?redirect_url=%2Fcommunity" className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%", justifyContent: "center" }}>Sign in <IArrowUpRight /></Link>
           <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--v-line)" }}>
-            <SignUpButton mode="modal">
-              <button type="button" className="v-btn v-btn-sm v-btn-quiet">New here? Create an account</button>
-            </SignUpButton>
+            <Link href="/sign-up?redirect_url=%2Fcommunity" className="v-btn v-btn-sm v-btn-quiet">New here? Create an account</Link>
           </div>
         </div>
       </div>

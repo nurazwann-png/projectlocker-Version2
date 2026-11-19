@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 
 interface Comment {
   id: string;
@@ -68,8 +68,8 @@ interface CommentFormProps {
 }
 
 function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "Write a comment…" }: CommentFormProps) {
-  const { user, isLoaded } = useUser();
-  const clerkName = user ? (user.fullName || user.username || user.primaryEmailAddress?.emailAddress || "") : null;
+  const { user, isLoaded } = useSession();
+  const accountName = user ? (user.name || user.email) : null;
   const [guestName, setGuestName] = useState(() => {
     try { return localStorage.getItem("comment-name") ?? ""; } catch { return ""; }
   });
@@ -77,7 +77,7 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const authorName = clerkName ?? guestName;
+  const authorName = accountName ?? guestName;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,7 +85,7 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
     setSubmitting(true);
     setError("");
     try {
-      if (!clerkName) { try { localStorage.setItem("comment-name", authorName.trim()); } catch {} }
+      if (!accountName) { try { localStorage.setItem("comment-name", authorName.trim()); } catch {} }
       const res = await fetch(`/api/public/comments/${projectId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,16 +104,12 @@ function CommentForm({ projectId, parentId, onPosted, onCancel, placeholder = "W
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      {isLoaded && clerkName ? (
+      {isLoaded && accountName ? (
         <div className="flex items-center gap-2 rounded-lg px-3 py-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          {user?.imageUrl ? (
-            <img src={user.imageUrl} alt="" className="h-5 w-5 rounded-full object-cover flex-shrink-0" />
-          ) : (
-            <div className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: avatarColor(clerkName) }}>
-              {clerkName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <span className="text-xs font-semibold truncate" style={{ color: "var(--v-text)" }}>{clerkName}</span>
+          <div className="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style={{ background: avatarColor(accountName) }}>
+            {accountName.charAt(0).toUpperCase()}
+          </div>
+          <span className="text-xs font-semibold truncate" style={{ color: "var(--v-text)" }}>{accountName}</span>
           <span className="text-[10px] ml-auto" style={{ color: "var(--v-faint)" }}>signed in</span>
         </div>
       ) : (
@@ -386,7 +382,7 @@ function CommentRow({ comment, projectId, onReplyPosted, onAcknowledge, onDelete
 
 /* ── main CommentSection ── */
 export default function CommentSection({ projectId, isOwner = false, onCommentPosted }: CommentSectionProps) {
-  const { user } = useUser();
+  const { user } = useSession();
   const currentUserId = user?.id ?? null;
   const [tree, setTree] = useState<Comment[]>([]);
   const [totalCount, setTotalCount] = useState(0);

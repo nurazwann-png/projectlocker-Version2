@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID ?? "";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
-  const { userId } = await auth();
+  const { userId, isAdmin } = await auth();
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { userId: true } });
   if (!project) return NextResponse.json([], { status: 200 });
 
   const isOwner = !!userId && userId === project.userId;
-  const isAdmin = !!userId && userId === ADMIN_USER_ID;
 
   if (isOwner || isAdmin) {
     const comments = await prisma.comment.findMany({
@@ -68,7 +65,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ project
 
 export async function POST(req: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
-  const { userId } = await auth();
+  const { userId, isAdmin } = await auth();
   const { authorName, body, parentId } = await req.json();
   if (!authorName?.trim() || !body?.trim()) {
     return NextResponse.json({ error: "Name and body required" }, { status: 400 });

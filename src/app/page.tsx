@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import AccountMenu from "@/components/AccountMenu";
 import type { Project, ProjectFormData, ProjectStatus } from "@/types/project";
 import { useProjects } from "@/hooks/useProjects";
 import { useProfile } from "@/hooks/useProfile";
@@ -242,7 +242,7 @@ export default function DashboardPage() {
             <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">{t("nav.home")}</span></Link>
             <Link href="/community" className="v-btn v-btn-sm v-btn-quiet" title={t("nav.community")}><IUsers /> <span className="v-hide-xs">{t("nav.community")}</span></Link>
             {mode === "local" && <Link href="/sign-in" className="v-btn v-btn-sm v-hide-sm-down">{t("nav.signIn")}</Link>}
-            {mode === "cloud" && <UserButton />}
+            {mode === "cloud" && <AccountMenu />}
             <button onClick={openAddModal} className="v-btn v-btn-sm v-btn-primary"><IPlus /> <span className="v-hide-xs">{t("nav.newProject")}</span></button>
           </div>
         </div>

@@ -1,5 +1,4 @@
 import { randomBytes } from "crypto";
-import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 
 /** Profile fields that are safe to show visitors (never the notes PIN). */
@@ -13,12 +12,8 @@ export function newShareToken(): string {
 }
 
 export async function displayNameFor(userId: string): Promise<string | null> {
-  try {
-    const user = await (await clerkClient()).users.getUser(userId);
-    return user.fullName || user.username || null;
-  } catch {
-    return null;
-  }
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } }).catch(() => null);
+  return user?.name || null;
 }
 
 export async function loadPublicProfile(userId: string) {

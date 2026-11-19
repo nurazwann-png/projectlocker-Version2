@@ -1012,3 +1012,28 @@ html[data-vlite] .lx-reveal { opacity: 1; transform: none; filter: none; transit
   .lx-reveal { opacity: 1; transform: none; filter: none; }
 }
 
+
+/* ── Register / sign-in form ── */
+.au-form { width: min(420px, calc(100vw - 32px)); padding: 30px 28px 24px; border-radius: 20px; background: var(--v-panel); border: 1px solid var(--v-line-2); display: grid; gap: 4px; }
+.au-form .v-field { margin-top: 14px; }
+.au-form .v-label { display: flex; align-items: center; justify-content: space-between; }
+.au-form-title { font-family: var(--v-display); font-weight: 500; font-size: 24px; letter-spacing: -0.03em; }
+.au-form-sub { color: var(--v-muted); font-size: 14px; line-height: 1.55; margin-top: 6px; }
+.au-show { font: 500 11px var(--v-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--v-signal); background: none; border: 0; cursor: pointer; padding: 2px 4px; }
+.au-error { margin-top: 16px; padding: 10px 12px; border-radius: 10px; font-size: 13.5px; color: var(--v-text); background: rgba(var(--v-coral-rgb),0.1); border: 1px solid rgba(var(--v-coral-rgb),0.45); }
+.au-submit { width: 100%; justify-content: center; margin-top: 20px; }
+.au-submit:disabled { opacity: 0.7; cursor: progress; }
+.au-switch { margin-top: 16px; text-align: center; font-size: 13.5px; color: var(--v-muted); }
+.au-switch a { color: var(--v-signal); font-weight: 600; text-decoration: none; }
+.au-switch a:hover { text-decoration: underline; }
+
+/* ── Account menu ── */
+.am-wrap { position: relative; }
+.am-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(var(--v-c1-rgb),0.45); background: linear-gradient(135deg, rgba(var(--v-c1-rgb),0.18), rgba(var(--v-c2-rgb),0.18)); color: var(--v-text); font: 600 12px var(--v-sans); cursor: pointer; display: grid; place-items: center; }
+.am-btn:hover, .am-btn[aria-expanded="true"] { box-shadow: 0 0 0 3px rgba(var(--v-c1-rgb),0.15); }
+.am-menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 220px; max-width: 280px; padding: 6px; border-radius: 14px; background: var(--v-panel); border: 1px solid var(--v-line-2); box-shadow: 0 18px 40px -12px rgba(0,0,0,0.35); z-index: 60; }
+.am-who { display: grid; gap: 2px; padding: 10px 10px 12px; border-bottom: 1px solid var(--v-line); margin-bottom: 4px; }
+.am-who strong { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.am-who span { font-size: 12.5px; color: var(--v-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.am-item { width: 100%; text-align: left; padding: 9px 10px; border-radius: 9px; border: 0; background: none; color: var(--v-text); font: 500 13.5px var(--v-sans); cursor: pointer; }
+.am-item:hover { background: rgba(var(--v-c1-rgb),0.08); }

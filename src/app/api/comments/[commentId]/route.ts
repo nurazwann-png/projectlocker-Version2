@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 type Params = { params: Promise<{ commentId: string }> };
@@ -7,7 +7,7 @@ type Params = { params: Promise<{ commentId: string }> };
 // PATCH — edit comment body (author only)
 export async function PATCH(req: Request, { params }: Params) {
   const { commentId } = await params;
-  const { userId } = await auth();
+  const { userId, isAdmin } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const comment = await prisma.comment.findUnique({
@@ -31,7 +31,7 @@ export async function PATCH(req: Request, { params }: Params) {
 // DELETE — author, project owner, or admin
 export async function DELETE(_req: Request, { params }: Params) {
   const { commentId } = await params;
-  const { userId } = await auth();
+  const { userId, isAdmin } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const comment = await prisma.comment.findUnique({
@@ -47,7 +47,6 @@ export async function DELETE(_req: Request, { params }: Params) {
 
   const isAuthor = comment.authorId === userId;
   const isOwner = project?.userId === userId;
-  const isAdmin = userId === (process.env.ADMIN_USER_ID ?? "");
   if (!isAuthor && !isOwner && !isAdmin)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 

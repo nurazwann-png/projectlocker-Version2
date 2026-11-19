@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import PortfolioView, { toPortfolio, type PortfolioState } from "@/components/PortfolioView";
 
 /** Visitor view of a portfolio, reached through a share link / QR code the owner controls. */
 export default function SharedPortfolioPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
-  const { user } = useUser();
+  const { user } = useSession();
   const [state, setState] = useState<PortfolioState>({ kind: "loading" });
 
   useEffect(() => {

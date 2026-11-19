@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { userId } = await auth();
+  const { userId, isAdmin } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const project = await prisma.project.findUnique({ where: { id }, select: { userId: true } });
-  const isAdmin = userId === (process.env.ADMIN_USER_ID ?? "");
   if (!project || (project.userId !== userId && !isAdmin)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

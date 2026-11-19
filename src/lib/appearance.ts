@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import { APPEARANCE_STORAGE_KEY as STORAGE_KEY, LANGS, THEME_IDS } from "./appearanceBoot";
 
 export type ThemeId = (typeof THEME_IDS)[number];
@@ -109,13 +109,13 @@ const getServerSnapshot = () => DEFAULT_APPEARANCE;
 
 export function useAppearance() {
   const appearance = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const { user } = useUser();
+  const { user, updateUser } = useSession();
 
   // Signed in: the account's saved appearance wins once per page load
   useEffect(() => {
     if (!user || pulledFromAccount) return;
     pulledFromAccount = true;
-    const remote = (user.unsafeMetadata as { appearance?: unknown })?.appearance;
+    const remote = user.appearance;
     if (remote) setAppearance(sanitize(remote));
   }, [user]);
 
@@ -125,9 +125,9 @@ export function useAppearance() {
     if (!user) return;
     if (accountTimer) clearTimeout(accountTimer);
     accountTimer = setTimeout(() => {
-      user.update({ unsafeMetadata: { ...user.unsafeMetadata, appearance: next } }).catch(() => {});
+      updateUser({ appearance: next }).catch(() => {});
     }, 700);
-  }, [user]);
+  }, [user, updateUser]);
 
   return { appearance, update, syncsToAccount: Boolean(user) };
 }

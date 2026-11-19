@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 
 export interface ProfileLinks {
   github?: string;
@@ -53,8 +53,7 @@ async function profileApi(init?: RequestInit) {
 }
 
 export function useProfile() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { user } = useUser();
+  const { isLoaded, isSignedIn, user, updateUser } = useSession();
   const mode = !isLoaded ? "loading" : isSignedIn ? "cloud" : "local";
 
   const [profile, setProfile] = useState<ProfileData>(DEFAULT_PROFILE);
@@ -129,13 +128,12 @@ export function useProfile() {
 
   const setDisplayName = useCallback(async (name: string) => {
     const clean = name.trim().slice(0, 60);
-    if (mode === "cloud" && user) {
-      const [firstName, ...rest] = clean.split(/\s+/);
-      await user.update({ firstName: firstName ?? "", lastName: rest.join(" ") }).catch(() => {});
+    if (mode === "cloud") {
+      if (clean) await updateUser({ name: clean }).catch(() => {});
       return;
     }
     patch({ displayName: clean });
-  }, [mode, user, patch]);
+  }, [mode, updateUser, patch]);
 
   /** Usernames live on the server, so claiming one needs an account. */
   const setUsername = useCallback(async (raw: string): Promise<UsernameResult> => {
@@ -169,7 +167,7 @@ export function useProfile() {
   }, [mode, persist]);
 
   const displayName = mode === "cloud"
-    ? (user?.fullName || user?.username || profile.username || "Your name")
+    ? (user?.name || profile.username || "Your name")
     : (profile.displayName || DEFAULT_NAME);
 
   return {

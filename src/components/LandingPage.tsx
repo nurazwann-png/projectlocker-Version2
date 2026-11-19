@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
+import AccountMenu from "./AccountMenu";
 import Cover from "@/components/Cover";
 import StatusBadge from "@/components/StatusBadge";
 import ThemePicker from "@/components/ThemePicker";
@@ -113,7 +114,7 @@ export default function LandingPage() {
   const stats = useInView<HTMLDivElement>(0.35);
   const year = new Date().getFullYear();
   const t = useT();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useSession();
   const words = t("lx.words").split("|");
 
   useRevealAll(rootRef);
@@ -172,11 +173,9 @@ export default function LandingPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
             {isLoaded && !isSignedIn && (
-              <SignInButton mode="modal" forceRedirectUrl="/">
-                <button className="v-btn v-btn-sm v-btn-quiet v-hide-xs">{t("nav.login")}</button>
-              </SignInButton>
+              <Link href="/sign-in" className="v-btn v-btn-sm v-btn-quiet v-hide-xs">{t("nav.login")}</Link>
             )}
-            {isSignedIn && <UserButton />}
+            {isSignedIn && <AccountMenu />}
             <Link href="/" className="v-btn v-btn-sm v-btn-primary">{t("nav.enterApp")} <IArrowUpRight /></Link>
           </div>
         </div>
@@ -209,9 +208,7 @@ export default function LandingPage() {
           <div className="lx-ctas v-rise" style={{ animationDelay: "420ms" }}>
             <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
             {isLoaded && !isSignedIn ? (
-              <SignInButton mode="modal" forceRedirectUrl="/">
-                <button className="v-btn v-btn-lg">{t("nav.login")}</button>
-              </SignInButton>
+              <Link href="/sign-in" className="v-btn v-btn-lg">{t("nav.login")}</Link>
             ) : (
               <a href="#features" className="v-btn v-btn-lg">{t("lx.inside")}</a>
             )}
@@ -331,9 +328,7 @@ export default function LandingPage() {
           <div className="lx-ctas" style={{ position: "relative" }}>
             <Link href="/" className="v-btn v-btn-lg v-btn-primary">{t("lx.enter")} <IArrowUpRight /></Link>
             {isLoaded && !isSignedIn && (
-              <SignUpButton mode="modal" forceRedirectUrl="/">
-                <button className="v-btn v-btn-lg">{t("nav.signUp")}</button>
-              </SignUpButton>
+              <Link href="/sign-up" className="v-btn v-btn-lg">{t("nav.signUp")}</Link>
             )}
           </div>
         </section>

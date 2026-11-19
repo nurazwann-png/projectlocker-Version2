@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID ?? "";
-
 export async function GET(req: Request) {
-  const { userId } = await auth();
+  const { isAdmin } = await auth();
   const pinToken = req.headers.get("x-admin-pin");
   const adminPin = process.env.ADMIN_PIN ?? "";
   const pinOk = adminPin && pinToken === adminPin;
-  const clerkOk = !!userId && userId === ADMIN_USER_ID;
-  if (!clerkOk && !pinOk) {
+  if (!isAdmin && !pinOk) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

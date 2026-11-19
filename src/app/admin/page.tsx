@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useAuth, SignInButton } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import ThemePicker from "@/components/ThemePicker";
 import { IArrowLeft, ILock, ITrash, LockerMark } from "@/components/icons";
 import { monogram, pad } from "@/lib/projectMeta";
@@ -409,7 +409,7 @@ function Dashboard({ pinToken, onForbidden }: { pinToken?: string; onForbidden: 
 
 /* ── Main page ── */
 export default function AdminPage() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, user, signOut } = useSession();
   const [pinToken, setPinToken] = useState<string | null>(() => {
     try { return sessionStorage.getItem("admin-pin-token"); } catch { return null; }
   });
@@ -435,7 +435,7 @@ export default function AdminPage() {
     setForbidden(true);
   }
 
-  const isAuthenticated = (isLoaded && isSignedIn) || !!pinToken;
+  const isAuthenticated = (isLoaded && isSignedIn && !!user?.isAdmin) || !!pinToken;
 
   return (
     <div className="vault">
@@ -453,7 +453,7 @@ export default function AdminPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ThemePicker />
             <Link href="/landing" className="v-btn v-btn-sm v-btn-quiet"><IArrowLeft /> <span className="v-hide-xs">Back</span></Link>
-            {isAuthenticated && <button onClick={handleSignOut} className="v-btn v-btn-sm">Sign out</button>}
+            {isAuthenticated && <button onClick={() => { handleSignOut(); if (isSignedIn) signOut(); }} className="v-btn v-btn-sm">Sign out</button>}
           </div>
         </div>
       </nav>
@@ -474,9 +474,11 @@ export default function AdminPage() {
               <h2 className="v-dialog-title" style={{ fontSize: 24 }}>Admin access</h2>
               <p style={{ color: "var(--v-muted)", marginTop: 8 }}>Sign in or enter your admin PIN</p>
 
-              <SignInButton mode="modal">
-                <button className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%", marginTop: 24 }}>Sign in as admin</button>
-              </SignInButton>
+              {isSignedIn ? (
+                <p className="v-mono" style={{ marginTop: 24, color: "var(--v-faint)" }}>{user?.email} is not an admin account</p>
+              ) : (
+                <Link href="/sign-in?redirect_url=%2Fadmin" className="v-btn v-btn-lg v-btn-primary" style={{ width: "100%", marginTop: 24, justifyContent: "center" }}>Sign in as admin</Link>
+              )}
 
               <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "18px 0" }}>
                 <span style={{ flex: 1, height: 1, background: "var(--v-line)" }} />

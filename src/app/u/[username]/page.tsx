@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, use } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/session";
 import PortfolioView, { toPortfolio, type PortfolioState } from "@/components/PortfolioView";
 
 /** Owner preview of their portfolio. Everyone else is told to use a share link. */
 export default function OwnerPortfolioPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = use(params);
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded } = useSession();
   const [state, setState] = useState<PortfolioState>({ kind: "loading" });
 
   useEffect(() => {

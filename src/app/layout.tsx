@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
+import { SessionProvider } from "@/lib/session";
 import Script from "next/script";
 import "./globals.css";
 import SwRegister from "./sw-register";
@@ -41,7 +41,6 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
       <html lang="en" data-vtheme="daylight" suppressHydrationWarning>
         <head>
           <Script id="appearance-boot" strategy="beforeInteractive">{APPEARANCE_BOOT_SCRIPT}</Script>
@@ -51,10 +50,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <link rel="stylesheet" href={FONTS_URL} />
         </head>
         <body className="antialiased">
-          {children}
+          <SessionProvider>{children}</SessionProvider>
           <SwRegister />
         </body>
       </html>
-    </ClerkProvider>
   );
 }

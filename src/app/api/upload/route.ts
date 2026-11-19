@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 
