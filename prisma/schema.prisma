@@ -17,6 +17,8 @@ model User {
   passwordHash String
   appearance   Json?
   sessionVersion Int    @default(0)
+  failedLogins Int      @default(0)
+  lockedUntil  DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

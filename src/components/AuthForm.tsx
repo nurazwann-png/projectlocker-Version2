@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { safeRedirect, useSession } from "@/lib/session";
 import { useT, type TKey } from "@/lib/i18n";
 import { IArrowUpRight } from "./icons";
+import PasswordStrength from "./PasswordStrength";
 
 const SERVER_ERRORS: Record<string, TKey> = {
   name: "au.errName",
@@ -14,6 +15,8 @@ const SERVER_ERRORS: Record<string, TKey> = {
   taken: "au.errTaken",
   invalid: "au.errInvalid",
   rate_limited: "au.errRate",
+  breached: "au.errBreached",
+  locked: "au.errLocked",
 };
 
 /** Registration and login form, styled like the rest of the app. */
@@ -56,7 +59,8 @@ export default function AuthForm({ kind }: { kind: "sign-in" | "sign-up" }) {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const key = SERVER_ERRORS[body.error as string] ?? "au.errFailed";
-        return fail(key, body.error === "taken" ? "email" : ["name", "email", "password"].includes(body.error) ? body.error : null);
+        const which = body.error === "taken" ? "email" : body.error === "breached" ? "password" : ["name", "email", "password"].includes(body.error) ? body.error : null;
+        return fail(key, which);
       }
       await refresh();
       router.replace(redirect);
@@ -93,7 +97,7 @@ export default function AuthForm({ kind }: { kind: "sign-in" | "sign-up" }) {
           <button type="button" className="au-show" onClick={() => setShow((s) => !s)}>{t(show ? "au.hide" : "au.show")}</button>
         </label>
         <input id="au-pass" className={`v-input${err("password")}`} type={show ? "text" : "password"} autoComplete={isUp ? "new-password" : "current-password"} maxLength={200} value={password} onChange={(e) => setPassword(e.target.value)} />
-        {isUp && <span className="v-hint">{t("au.passwordHint")}</span>}
+        {isUp && (password ? <PasswordStrength password={password} /> : <span className="v-hint">{t("au.passwordHint")}</span>)}
       </div>
 
       {isUp && (

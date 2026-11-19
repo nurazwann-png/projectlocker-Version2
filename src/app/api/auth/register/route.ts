@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, normalizeEmail, setSessionCookie, PUBLIC_USER_FIELDS } from "@/lib/auth";
 import { adoptLegacyData } from "@/lib/legacyAccounts";
+import { checkNewPassword } from "@/lib/passwordPolicy";
 import { clientIp, tooManyAttempts } from "@/lib/rateLimit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,7 +19,8 @@ export async function POST(req: Request) {
 
   if (!name) return NextResponse.json({ error: "name" }, { status: 400 });
   if (!EMAIL_RE.test(email) || email.length > 200) return NextResponse.json({ error: "email" }, { status: 400 });
-  if (password.length < 8 || password.length > 200) return NextResponse.json({ error: "password" }, { status: 400 });
+  const problem = await checkNewPassword(password);
+  if (problem) return NextResponse.json({ error: problem }, { status: 400 });
 
   try {
     const user = await prisma.user.create({

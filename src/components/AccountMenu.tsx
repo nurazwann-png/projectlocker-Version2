@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { useT } from "@/lib/i18n";
 import { monogram } from "@/lib/projectMeta";
+import SecurityDialog from "./SecurityDialog";
 
 /** Signed-in user's avatar button with a small menu (name, email, sign out). */
 export default function AccountMenu() {
@@ -12,6 +13,7 @@ export default function AccountMenu() {
   const router = useRouter();
   const { user, signOut } = useSession();
   const [open, setOpen] = useState(false);
+  const [security, setSecurity] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,6 +25,8 @@ export default function AccountMenu() {
     document.addEventListener("keydown", close);
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
   }, [open]);
+
+  const closeSecurity = useCallback(() => setSecurity(false), []);
 
   if (!user) return null;
 
@@ -44,9 +48,11 @@ export default function AccountMenu() {
             <strong>{user.name}</strong>
             <span>{user.email}</span>
           </div>
+          <button type="button" role="menuitem" className="am-item" onClick={() => { setOpen(false); setSecurity(true); }}>{t("sec.menu")}</button>
           <button type="button" role="menuitem" className="am-item" onClick={doSignOut}>{t("au.signOut")}</button>
         </div>
       )}
+      <SecurityDialog open={security} onClose={closeSecurity} />
     </div>
   );
 }
