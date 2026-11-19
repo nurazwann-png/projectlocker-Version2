@@ -98,6 +98,7 @@ export default function AuthForm({ kind }: { kind: "sign-in" | "sign-up" }) {
         </label>
         <input id="au-pass" className={`v-input${err("password")}`} type={show ? "text" : "password"} autoComplete={isUp ? "new-password" : "current-password"} maxLength={200} value={password} onChange={(e) => setPassword(e.target.value)} />
         {isUp && (password ? <PasswordStrength password={password} /> : <span className="v-hint">{t("au.passwordHint")}</span>)}
+        {!isUp && <Link href={`/forgot-password${email.trim() ? `?email=${encodeURIComponent(email.trim())}` : ""}`} className="au-forgot">{t("au.forgot")}</Link>}
       </div>
 
       {isUp && (

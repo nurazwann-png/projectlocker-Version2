@@ -23,6 +23,19 @@ model User {
   updatedAt    DateTime @updatedAt
 }
 
+// One-time password reset links. Only a SHA-256 hash of the token is stored,
+// so a database leak can't be used to reset anyone's password.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 // Clerk accounts from before Project Locker had its own login. When someone
 // registers with the same email, their old rows move to the new account.
 model LegacyAccount {
